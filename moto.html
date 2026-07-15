@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>酛を、建てる。｜酒母の温度管理</title>
+<style>
+  :root{
+    --bg:#0b0a0d;--bg2:#141118;--ink:#f6f1e6;--ink-dim:#a8a091;
+    --blood:#ff2e17;--gold:#f2b43a;--foam:#fff7e6;--line:rgba(246,241,230,.14);
+    --yeast:#8ad36b;--acid:#f2b43a;--temp:#5fa8ff;--zatsu:#ff2e17;--warn:#ff9d2e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Hiragino Sans",sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.6}
+  body::after{content:"";position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.5;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .wrap{max-width:640px;margin:0 auto;padding:1.2rem}
+  .blood{color:var(--blood)}.gold{color:var(--gold)}
+
+  #intro{min-height:100svh;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:2rem 1.4rem}
+  #intro .kick{letter-spacing:.4em;color:var(--gold);font-size:.72rem;font-weight:700;margin-bottom:1.2rem}
+  #intro h1{font-weight:900;font-size:clamp(2.2rem,9vw,3.6rem);line-height:1.1}
+  #intro p{color:var(--ink-dim);margin:1.6rem auto 0;max-width:27rem}
+  #intro .goal{border:1px solid var(--line);border-radius:14px;padding:1.1rem;margin:1.8rem auto 0;max-width:25rem;background:var(--bg2);text-align:left;font-size:.9rem}
+  #intro .goal b{color:var(--gold)}
+  .target-row{display:flex;gap:.7rem;margin:1.4rem auto 0;max-width:25rem}
+  .target-row .t{flex:1;border:1px solid var(--line);border-radius:12px;padding:.9rem;background:var(--bg2);cursor:pointer;font-size:.85rem}
+  .target-row .t.on{border-color:var(--blood);background:#1b1620}
+  .target-row .t b{display:block;font-size:1rem;margin-bottom:.2rem}
+  .btn{margin-top:1.6rem;display:inline-block;font-weight:800;letter-spacing:.1em;color:#0b0a0d;background:var(--blood);border:none;border-radius:100px;padding:1rem 2.2rem;cursor:pointer;font-size:.95rem;box-shadow:0 8px 26px rgba(255,46,23,.32)}
+  .btn:hover{background:#ff4526;transform:translateY(-2px)}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+
+  #game{display:none}
+  .topbar{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.7rem}
+  .topbar .hr{font-weight:900;font-size:1.05rem}
+  .topbar .hr b{color:var(--gold);font-family:Arial}
+  .topbar .phase{font-size:.82rem;color:var(--ink-dim)}
+  .chart-wrap{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:.7rem}
+  svg.chart{width:100%;height:auto;display:block}
+  .legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.72rem;margin-top:.4rem;color:var(--ink-dim)}
+  .legend i{width:14px;height:3px;border-radius:2px;display:inline-block;margin-right:.3rem;vertical-align:middle}
+  .guidetog{margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--temp);border-radius:100px;padding:.25rem .7rem;font-size:.7rem;font-weight:700;cursor:pointer}
+
+  .readout{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:.8rem}
+  .ro{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:.55rem;text-align:center}
+  .ro .l{font-size:.62rem;color:var(--ink-dim)}
+  .ro .v{font-weight:900;font-size:1.1rem;margin-top:.1rem}
+
+  .warn{margin-top:.8rem;border-radius:10px;padding:.7rem .9rem;font-size:.85rem;font-weight:700;display:none}
+  .warn.show{display:block}
+  .warn.danger{background:rgba(255,46,23,.14);border:1px solid var(--blood);color:#ff8a76}
+  .warn.caution{background:rgba(255,157,46,.12);border:1px solid var(--warn);color:var(--warn)}
+
+  .tempctl{margin-top:1rem;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:1rem}
+  .tempctl .row{display:flex;align-items:center;justify-content:center;gap:1.2rem}
+  .tempctl .big{font-weight:900;font-size:2.2rem;font-family:Arial;min-width:5rem;text-align:center}
+  .tempctl .big small{font-size:1rem;color:var(--ink-dim)}
+  .tbtn{width:56px;height:56px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:1.5rem;font-weight:900;cursor:pointer}
+  .tbtn:hover{border-color:var(--blood);color:var(--blood)}
+  .tempctl .hint{text-align:center;font-size:.72rem;color:var(--ink-dim);margin-top:.5rem}
+
+  .actions{display:flex;gap:.7rem;margin-top:1rem}
+  .actions .btn{flex:1;margin:0;padding:.9rem;text-align:center}
+  .actions .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+  .actions .btn.ghost:hover{border-color:var(--gold)}
+
+  #result{display:none;text-align:center}
+  #result .eyebrow{letter-spacing:.3em;color:var(--gold);font-size:.72rem;font-weight:800;margin-bottom:1rem}
+  #result .grade{font-weight:900;font-size:clamp(2rem,9vw,3rem)}
+  #result .stars{font-size:1.6rem;margin-top:.8rem;letter-spacing:.2em}
+  #result .comment{color:var(--ink);font-size:1.05rem;margin:1.2rem auto 0;max-width:28rem;font-weight:600}
+  #result .spec{display:grid;grid-template-columns:repeat(2,1fr);gap:.7rem;margin:1.8rem auto 0;max-width:24rem}
+  #result .spec .s{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:.8rem}
+  #result .spec .s .l{font-size:.66rem;color:var(--ink-dim)}
+  #result .spec .s .v{font-weight:900;font-size:1.15rem;margin-top:.15rem}
+  #result .bridge{margin:1.6rem auto 0;max-width:26rem;border:1px dashed rgba(242,180,58,.5);border-radius:12px;padding:1rem;font-size:.86rem;color:var(--gold);font-weight:700;background:rgba(242,180,58,.06)}
+</style>
+</head>
+<body>
+
+<!-- INTRO -->
+<section id="intro">
+  <div class="kick">一麹 二酛 三造り ／ BUILDING THE MOTO</div>
+  <div style="display:flex;gap:.55rem;justify-content:center;font-size:.72rem;font-weight:800;letter-spacing:.08em;color:var(--ink-dim);margin-bottom:1.4rem"><span>① 麹</span><span>→</span><span class="blood">② 酛</span><span>→</span><span>③ 醪</span></div>
+  <h1>酛（もと）を、<span class="blood">建てる</span>。</h1>
+  <p>次は酒母（しゅぼ）＝酛。醪に入れる<b style="color:var(--ink)">元気な酵母を、大量に、雑菌を抑えて</b>育てる仕込み。守るのは<b style="color:var(--gold)">乳酸（酸）と品温</b>。酸が酵母を守り、温度が誰を育てるかを決める。</p>
+  <div class="goal">🎯 <b>ねらい</b>：雑菌を寄せつけず、元気な酵母をたっぷり湧かせる。<b>どの造りでいく？</b></div>
+  <div id="kojiCard"></div>
+  <div class="target-row">
+    <div class="t on" data-t="sokujo" onclick="pickType('sokujo',this)"><b>速醸（そくじょう）</b>乳酸を加えて手早く安全に。クセなく軽快。<br><span style="color:var(--ink-dim)">→ 最初から酸で守られる。温めて育てるだけ</span></div>
+    <div class="t" data-t="kimoto" onclick="pickType('kimoto',this)"><b>生酛・山廃</b>自然の乳酸菌を低温で育てる。濃醇で複雑。<br><span style="color:var(--ink-dim)">→ まず打瀬で酸を育て、それから暖気</span></div>
+  </div>
+  <div><button class="btn" onclick="startGame()">仕込み open！</button></div>
+</section>
+
+<!-- GAME -->
+<section id="game"><div class="wrap">
+  <div class="topbar">
+    <div class="hr">経過 <b id="day">0</b> 日目</div>
+    <div class="phase" id="phase">仕込み</div>
+  </div>
+
+  <div class="chart-wrap">
+    <svg class="chart" id="chart" viewBox="0 0 620 280"></svg>
+    <div class="legend">
+      <span><i style="background:var(--yeast)"></i>酵母</span>
+      <span><i style="background:var(--acid)"></i>酸</span>
+      <span><i style="background:var(--temp)"></i>品温℃</span>
+      <button id="guideTog" class="guidetog" onclick="toggleGuide()">お手本：ON</button>
+    </div>
+  </div>
+
+  <div class="readout">
+    <div class="ro"><div class="l">酵母の湧き</div><div class="v" id="roY">1</div></div>
+    <div class="ro"><div class="l">酸（酵母を守る）</div><div class="v" id="roA">—</div></div>
+    <div class="ro"><div class="l">品温</div><div class="v" id="roT">20<small>℃</small></div></div>
+  </div>
+
+  <div class="warn" id="warn"></div>
+
+  <div class="tempctl">
+    <div class="row">
+      <button class="tbtn" onclick="adjT(-1)">▼</button>
+      <div class="big"><span id="temp">20</span><small>℃</small></div>
+      <button class="tbtn" onclick="adjT(1)">▲</button>
+    </div>
+    <div class="hint">▲＝暖気入れ（温める）／▼＝冷ます。明日の品温を決める</div>
+  </div>
+
+  <div class="actions">
+    <button class="btn ghost" onclick="advance()">1日 進める →</button>
+    <button class="btn" id="finishBtn" onclick="finish()" disabled>酛おろし（仕上げる）</button>
+  </div>
+</div></section>
+
+<!-- RESULT -->
+<section id="result"><div class="wrap">
+  <div class="eyebrow">建った、あなたの酛</div>
+  <div class="grade" id="rgrade"></div>
+  <div class="stars" id="rstars"></div>
+  <div class="comment" id="rcomment"></div>
+  <div class="spec" id="rspec"></div>
+  <div class="bridge" id="rbridge"></div>
+  <div id="rcta" style="margin-top:1.6rem"></div>
+  <div style="margin-top:1rem"><button class="btn" onclick="restart()" style="background:transparent;color:var(--ink);border:1px solid var(--line);box-shadow:none">酛を建て直す</button></div>
+</div></section>
+
+<script>
+// ===== 酒母（酛）モデル 案A（赤本準拠に再校正 2026-07-14）=====
+// 典拠『清酒製造技術』(赤本) 第Ⅵ章：速醸=仕込温度18〜20℃・最高20℃・育成5日＋枯らし5日で計〜15日・使用時ボーメ7〜8。
+//   生酛=終始低温、初暖気は仕込4〜6日、打瀬で硝酸還元菌→乳酸を育て、膨れ品温15〜17℃、育成30日前後、打瀬中ボーメ12〜13。
+// 型: sokujo(速醸=乳酸添加・酸高スタート・安全・短期) / kimoto(生酛=酸ゼロから低温で育てる・長期・難)
+// 酵母は自己触媒的に増殖。乳酸菌は冷温(打瀬)でのみ酸を作る。酸ができる前に暖気すると野生酵母が早湧き(腐造)。
+// 出力: vigor(元気さ)→醪のt0/tau、acid(酸度)・amino(アミノ酸度)→味ラベル。
+const MK={ rY:0.62, kAcid:16, rZ:1.5, kAmino:3.2, kHeat:0.9, protectTh:50,
+  tOptY:22,tWidY:7, tOptL:10,tWidL:3.5, zWarmT0:11, zWarmSpan:11 };
+const g=(T,o,w)=>Math.exp(-Math.pow((T-o)/w,2));
+
+let type='sokujo', nutri=1.0;
+let day=0, temp=18, yeast=1, acid=62, zatsu=0.5, amino=3;
+let maxTemp=0, maxZatsu=0;
+let rec=[], showGuide=true, kojiInfo=null, vintage=null;
+
+const $=s=>document.querySelector(s);
+const VINTAGES=['穏やかな年','やわらかく溶けやすい年','硬く溶けにくい年','高タンパクの年','小粒だが良質の年'];
+const RICE={yamada:'山田錦',gohyaku:'五百万石',miyama:'美山錦',omachi:'雄町'};
+const POLISHL={daiginjo:'精米50%',ginjo:'精米60%',junmai:'精米70%'};
+const _c=new URLSearchParams(location.search);
+let riceName=null, riceParam='';   // 米の名前と持ち回すクエリ
+
+// 前工程（米・麹）の受け取り。米(vin or rice/polish)を持ち回す。酒母型(moto)があれば初期選択。
+(function initKoji(){
+  if(_c.has('rice')){ const rn=RICE[_c.get('rice')]||'山田錦'; const pl=POLISHL[_c.get('polish')];
+    riceName=rn+(pl?`・${pl}`:''); const q=new URLSearchParams({rice:_c.get('rice')}); if(_c.get('polish'))q.set('polish',_c.get('polish')); riceParam=q.toString(); }
+  else { const v=parseInt(_c.get('vin')); if(isFinite(v)&&v>=0&&v<VINTAGES.length){ vintage=v; riceName=VINTAGES[v]; riceParam=`vin=${v}`; } }
+  const mt=_c.get('moto'); if(mt==='sokujo'||mt==='kimoto') type=mt;   // brewの酒母型を初期選択
+  if(!_c.has('toka')) return;
+  let toka=parseFloat(_c.get('toka')); if(!isFinite(toka)) return;
+  toka=Math.max(0,Math.min(100,toka));
+  const haze=_c.get('haze')==='tsuki'?'tsuki':'sou';
+  nutri=Math.max(0.5,Math.min(1.2,toka/76));
+  kojiInfo={toka:Math.round(toka),haze};
+})();
+function renderKojiCard(){
+  const el=$('#kojiCard'); if(!el) return;
+  let html='';
+  if(riceName){ html+=`<div class="goal" style="border-color:var(--gold);margin-top:1.2rem">🌾 <b>${_c.has('rice')?'選んだ米':'今年の米'}</b>：<b class="gold">${riceName}</b></div>`; }
+  if(kojiInfo){
+    const hazeName=kojiInfo.haze==='sou'?'総破精':'突き破精';
+    const n = nutri>=1.05?'糖化力たっぷり＝酵母の栄養が豊富。よく湧く。'
+            : nutri<=0.75?'糖化力が弱め＝栄養不足で酵母が伸びにくい。':'標準的な栄養。';
+    html+=`<div class="goal" style="border-color:var(--gold);margin-top:.6rem">🌾 <b>前工程の麹</b>：糖化力 <b class="gold">${kojiInfo.toka}</b> ／ ${hazeName}<br>`+
+      `<span style="color:var(--ink-dim);font-size:.82rem">→ この糖化力が酛の栄養になる。${n}</span></div>`;
+  }
+  el.innerHTML=html;
+}
+
+function pickType(t,el){ type=t; document.querySelectorAll('.target-row .t').forEach(x=>x.classList.toggle('on',x===el)); }
+// brewからの酒母型指定をUIに反映
+(function initTypeUI(){ document.querySelectorAll('.target-row .t').forEach(x=>x.classList.toggle('on',x.dataset.t===type)); })();
+function toggleGuide(){ showGuide=!showGuide; $('#guideTog').textContent='お手本：'+(showGuide?'ON':'OFF'); draw(); }
+
+// 型ごとの初期値・お手本（赤本準拠）
+function idealT(d){
+  if(type==='sokujo'){ return d<4 ? 18+d*0.5 : 20; }                       // 速醸：18→20℃で保持（最高20℃）
+  return d<7 ? 8 : (d<12 ? 8+(d-7)*1.8 : (d<24?17:18));                    // 生酛：打瀬7日(冷)→暖気で15-17→終盤18
+}
+const maxDay=()=> type==='sokujo'?15:32;                                    // 速醸〜15日 / 生酛〜30日
+
+function startGame(){
+  yeast=1; zatsu=0.5; day=0; maxTemp=0; maxZatsu=0;
+  acid = type==='sokujo'?62:5;
+  amino = type==='kimoto'?8:3;
+  temp = type==='sokujo'?18:8;
+  rec=[{day:0,temp,yeast,acid,zatsu}];
+  $('#temp').textContent=temp;
+  $('#intro').style.display='none'; $('#game').style.display='block';
+  draw(); refresh();
+}
+function adjT(d){ temp=Math.max(5,Math.min(28,temp+d)); $('#temp').textContent=temp; }
+
+function stepDay(){
+  const dt=0.1;
+  for(let i=0;i<10;i++){
+    yeast += MK.rY*yeast*g(temp,MK.tOptY,MK.tWidY)*nutri*(1-yeast/100)*dt;
+    if(type==='kimoto') acid += MK.kAcid*g(temp,MK.tOptL,MK.tWidL)*(1-acid/95)*dt;   // 乳酸菌は冷温のみ
+    const lowA=Math.max(0,(MK.protectTh-acid)/MK.protectTh);
+    const warmth=Math.max(0,Math.min(1,(temp-MK.zWarmT0)/MK.zWarmSpan));             // 打瀬(冷)=0、昇温で野生酵母/雑菌が活発
+    zatsu += MK.rZ*zatsu*warmth*lowA*(1-zatsu/100)*dt;                               // 酸不足×昇温=早湧き
+    amino += MK.kAmino*(0.35+g(temp,MK.tOptY,MK.tWidY)*0.65)*(1-amino/100)*dt;
+    if(temp>22){ yeast -= MK.kHeat*(temp-22)*yeast/100*dt; if(yeast<0)yeast=0; }      // 22℃超で酛焼け（赤本：最高20℃）
+    if(temp>maxTemp)maxTemp=temp;
+    if(zatsu>maxZatsu)maxZatsu=zatsu;
+  }
+  day+=1;
+  rec.push({day,temp,yeast,acid,zatsu});
+}
+function advance(){ if(day>=maxDay())return; stepDay(); draw(); refresh(); }
+
+function phaseName(){
+  if(type==='kimoto'){ if(day<7)return'打瀬（酸を育てる）'; if(day<12)return'暖気入れ'; if(yeast<70)return'酵母育成'; return'湧付き'; }
+  if(day<2)return'仕込み'; if(day<5)return'湧付き前'; if(yeast<70)return'酵母育成'; return'湧付き';
+}
+function vigorOf(){ return Math.max(0,Math.min(100, yeast*(1-0.9*zatsu/100))); }
+
+function refresh(){
+  $('#day').textContent=day;
+  $('#phase').textContent=phaseName();
+  $('#roY').textContent=Math.round(yeast);
+  $('#roA').textContent=Math.round(acid);
+  $('#roT').innerHTML=temp+'<small>℃</small>';
+  const enough = (type==='sokujo'? day>=11 : day>=24) || yeast>=85;
+  $('#finishBtn').disabled = !enough;
+  checkWarn();
+}
+function checkWarn(){
+  const w=$('#warn'); let msg='',cls='';
+  if(zatsu>25){ msg='🦠 野生酵母が早湧き！酸ができる前に温めた？ このままだと腐造。';cls='danger'; }
+  else if(type==='kimoto' && acid<MK.protectTh && temp>12 && yeast<40){ msg='⚠ まだ酸が足りない。暖気は酸ができてから。温めると野生酵母に負ける。';cls='caution'; }
+  else if(temp>22){ msg='🔥 熱すぎる。酵母が弱る（焼け酛）。酒母は最高20℃前後で。';cls='caution'; }
+  else if(day>5 && yeast<12 && temp<11){ msg='❄ 冷たすぎて酵母が動かない。（酸ができたら）暖気を入れて育てよう。';cls='caution'; }
+  else if(yeast>=85){ msg='✅ よく湧いた。酛おろし（仕上げ）の頃合い。';cls='caution'; }
+  if(msg){w.textContent=msg;w.className='warn show '+cls;}else{w.className='warn';}
+}
+
+function draw(){
+  const svg=$('#chart'),W=620,H=280,pad={l:34,r:38,t:14,b:24},XM=maxDay();
+  const x=d=>pad.l+(d/XM)*(W-pad.l-pad.r);
+  const yL=v=>H-pad.b-((v-0)/100)*(H-pad.t-pad.b);         // 酵母・酸 0-100
+  const yT=v=>H-pad.b-((v-5)/(28-5))*(H-pad.t-pad.b);      // 品温 5-28
+  let s='';
+  // 保護ライン（酸=protectTh）
+  s+=`<line x1="${pad.l}" y1="${yL(MK.protectTh)}" x2="${W-pad.r}" y2="${yL(MK.protectTh)}" stroke="rgba(242,180,58,.3)" stroke-dasharray="4 3"/>`;
+  s+=`<text x="${W-pad.r}" y="${yL(MK.protectTh)-3}" fill="rgba(242,180,58,.6)" font-size="8" text-anchor="end">酸の守り</text>`;
+  for(let d=0;d<=XM;d+=(XM>18?4:2)){ s+=`<line x1="${x(d)}" y1="${pad.t}" x2="${x(d)}" y2="${H-pad.b}" stroke="rgba(255,255,255,.04)"/><text x="${x(d)}" y="${H-pad.b+15}" fill="#a8a091" font-size="8" text-anchor="middle">${d}</text>`; }
+  if(showGuide){
+    let gp=''; for(let d=0;d<=XM;d++){ gp+=(d?'L':'M')+x(d).toFixed(1)+' '+yT(idealT(d)).toFixed(1)+' '; }
+    s+=`<path d="${gp}" fill="none" stroke="var(--temp)" stroke-width="1.5" stroke-dasharray="3 4" opacity=".35"/>`;
+    s+=`<text x="${x(XM*0.5)}" y="${yT(idealT(Math.round(XM*0.5)))-6}" fill="var(--temp)" font-size="8" opacity=".55">お手本の品温</text>`;
+  }
+  const P2=(sel,fn)=>rec.map((r,i)=>(i?'L':'M')+x(r.day).toFixed(1)+' '+fn(r[sel]).toFixed(1)).join(' ');
+  // 雑菌（赤・危険域）
+  if(maxZatsu>3) s+=`<path d="${P2('zatsu',yL)}" fill="none" stroke="var(--zatsu)" stroke-width="2" opacity=".7" stroke-dasharray="2 2"/>`;
+  s+=`<path d="${P2('acid',yL)}" fill="none" stroke="var(--acid)" stroke-width="2" opacity=".8"/>`;
+  s+=`<path d="${P2('temp',yT)}" fill="none" stroke="var(--temp)" stroke-width="2" opacity=".85"/>`;
+  s+=`<path d="${P2('yeast',yL)}" fill="none" stroke="var(--yeast)" stroke-width="2.5"/>`;
+  const last=rec[rec.length-1];
+  s+=`<circle cx="${x(last.day)}" cy="${yL(last.yeast)}" r="3.5" fill="var(--yeast)"/>`;
+  svg.innerHTML=s;
+}
+
+// vigor → 醪の酵母立ち上がり t0/tau（無指定なら醪側で 2.5/0.55）
+function vigorToYeastParams(v){
+  const REF=60;
+  const t0=Math.max(1.6,Math.min(4.5, 2.5*Math.pow(REF/Math.max(v,1),0.55)));
+  const tau=Math.max(0.40,Math.min(1.1, 0.55*Math.pow(REF/Math.max(v,1),0.35)));
+  return {t0:+t0.toFixed(2),tau:+tau.toFixed(2)};
+}
+function restart(){ const p=new URLSearchParams(riceParam); if(kojiInfo){p.set('toka',kojiInfo.toka);p.set('haze',kojiInfo.haze);} if(_c.get('yeast'))p.set('yeast',_c.get('yeast'));
+  location.href='moto.html'+(p.toString()?`?${p}`:''); }
+
+function finish(){
+  const vigor=Math.round(vigorOf());
+  const sando=(type==='sokujo'?0.9:1.3)+acid/100*0.6;      // 酸度（表示）
+  const aminodo=0.9+amino/100*1.4;                          // アミノ酸度（表示）
+  const yp=vigorToYeastParams(vigor);
+  const typeName=type==='sokujo'?'速醸':'生酛・山廃';
+  let stars=3,grade='',comment='';
+  if(maxZatsu>=40){ grade='腐らせ酛…';stars=1;comment='酸ができる前に温めてしまい、雑菌に負けた。生酛は打瀬でしっかり酸を育ててから暖気を。'; }
+  else if(vigor>=85 && (type==='sokujo'||acid>=55)){ grade='会心の酛！';stars=5;comment=type==='sokujo'?'雑味なく、元気な酵母がたっぷり湧いた理想の速醸酛。':'打瀬で酸を育て、暖気で酵母を湧かせた見事な生酛。骨太で複雑。'; }
+  else if(vigor>=65){ grade='good酛';stars=4;comment='大きな失敗なく、しっかり酵母の湧いた酛に仕上がった。'; }
+  else if(vigor>=40){ grade='まずまず酛';stars=3;comment='ひとまず酛にはなった。湧きがもう一段ほしいところ。'; }
+  else{ grade='育て損ね';stars=2;comment='酵母が湧ききらなかった。温度が低すぎたか、暖気が足りない。'; }
+
+  $('#game').style.display='none'; $('#result').style.display='block';
+  $('#rgrade').textContent=grade;
+  $('#rstars').textContent='★★★★★☆☆☆☆☆'.slice(5-stars,10-stars);
+  $('#rcomment').textContent=comment;
+  $('#rspec').innerHTML=
+    `<div class="s"><div class="l">造り</div><div class="v" style="font-size:.98rem">${typeName}</div></div>`+
+    `<div class="s"><div class="l">酵母の元気さ</div><div class="v">${vigor} / 100</div></div>`+
+    `<div class="s"><div class="l">酸度</div><div class="v">${sando.toFixed(1)}</div></div>`+
+    `<div class="s"><div class="l">アミノ酸度</div><div class="v">${aminodo.toFixed(1)}</div></div>`;
+  $('#rbridge').innerHTML=`🔗 この酛の<b>元気さ ${vigor}</b> が、次の「醪」の酵母の立ち上がり（t0=${yp.t0}）を決める。元気なら早くきれいに切れ、弱いと糖が溜まって暴れやすい。`;
+  const p=new URLSearchParams(riceParam);
+  if(kojiInfo){ p.set('toka',kojiInfo.toka); p.set('haze',kojiInfo.haze); }
+  if(_c.get('yeast')){ p.set('yeast',_c.get('yeast')); }
+  p.set('moto',type); p.set('vigor',vigor); p.set('acid',Math.round(acid)); p.set('amino',Math.round(amino));
+  $('#rcta').innerHTML=`<a class="btn" href="play.html?${p.toString()}">🍶 この酛で醪を仕込む →</a>`;
+}
+
+renderKojiCard();
+</script>
+</body>
+</html>

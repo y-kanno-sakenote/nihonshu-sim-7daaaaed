@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>醪シミュレーター実験台｜発酵モデル調整</title>
+<style>
+  :root{
+    --bg:#0b0a0d;--bg2:#141118;--ink:#f6f1e6;--ink-dim:#a8a091;
+    --blood:#ff2e17;--gold:#f2b43a;--foam:#fff7e6;--line:rgba(246,241,230,.14);
+    --baume:#f2b43a;--alc:#ff2e17;--temp:#5fa8ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Hiragino Sans",sans-serif;background:var(--bg);color:var(--ink);padding:1.5rem;line-height:1.6;-webkit-font-smoothing:antialiased}
+  h1{font-size:1.3rem;font-weight:900}
+  .sub{color:var(--ink-dim);font-size:.85rem;margin-top:.3rem}
+  .layout{display:grid;grid-template-columns:1fr 300px;gap:1.5rem;margin-top:1.4rem;align-items:start}
+  @media(max-width:900px){.layout{grid-template-columns:1fr}}
+  .panel{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:1.2rem}
+  .chart-wrap{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:1rem}
+  svg.chart{width:100%;height:auto;display:block}
+  .legend{display:flex;gap:1.2rem;flex-wrap:wrap;font-size:.78rem;margin-top:.6rem}
+  .legend span{display:inline-flex;align-items:center;gap:.4rem}
+  .legend i{width:16px;height:3px;border-radius:2px;display:inline-block}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-top:1rem}
+  .stat{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:.7rem}
+  .stat .l{font-size:.68rem;color:var(--ink-dim)}
+  .stat .v{font-weight:900;font-size:1.1rem;margin-top:.1rem}
+  .stat .ok{color:#5fd77a}.stat .ng{color:var(--blood)}
+  .ctrl{margin-bottom:1rem}
+  .ctrl label{display:flex;justify-content:space-between;font-size:.8rem;font-weight:700;margin-bottom:.35rem}
+  .ctrl label b{color:var(--gold);font-family:monospace}
+  input[type=range]{width:100%;accent-color:var(--blood)}
+  .preset-row{display:flex;gap:.5rem;margin-bottom:1.2rem;flex-wrap:wrap}
+  .preset-row button{flex:1;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:.5rem;font-size:.78rem;font-weight:700;cursor:pointer}
+  .preset-row button:hover{border-color:var(--blood)}
+  .preset-row button.active{background:var(--blood);border-color:var(--blood);color:#fff}
+  .tank-row{display:flex;align-items:center;gap:1rem;margin-top:1rem}
+  .vat{position:relative;width:80px;height:100px;border:1px solid var(--line);border-bottom:none;border-radius:8px 8px 0 0;overflow:hidden;background:linear-gradient(180deg,rgba(255,255,255,.04),rgba(0,0,0,.35));flex:0 0 auto}
+  .vat .liquid{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,#3a2a12,#1a1206);transition:height .3s}
+  .vat .bub{position:absolute;bottom:-8px;border-radius:50%;background:var(--foam);opacity:0;animation:rise linear infinite}
+  @keyframes rise{0%{transform:translateY(0) scale(.6);opacity:0}15%{opacity:.85}100%{transform:translateY(-100px) scale(1.1);opacity:0}}
+  .stage-info .name{font-weight:900;font-size:1.1rem}
+  .stage-info .desc{color:var(--ink-dim);font-size:.78rem}
+  .daynav{display:flex;align-items:center;gap:.8rem;margin-top:1rem}
+  .daynav input{flex:1}
+  .note{font-size:.72rem;color:var(--ink-dim);margin-top:1rem;line-height:1.6}
+  .note b{color:var(--gold)}
+</style>
+</head>
+<body>
+<h1>醪（もろみ）シミュレーター・実験台</h1>
+<div class="sub">並行複発酵モデルの調整用。薄いゴールドの帯＝資料のランドマーク目標（最高ボーメ7〜8＠3〜4日／アルコール18〜20＠25日／標準品温カーブ）。曲線がここに乗れば校正OK。</div>
+
+<div class="layout">
+  <div>
+    <div class="chart-wrap">
+      <svg class="chart" id="chart" viewBox="0 0 720 380"></svg>
+      <div class="legend">
+        <span><i style="background:var(--baume)"></i>ボーメ度（比重）</span>
+        <span><i style="background:var(--alc)"></i>アルコール %</span>
+        <span><i style="background:var(--temp)"></i>品温 ℃</span>
+        <span><i style="background:rgba(242,180,58,.35)"></i>目標ランドマーク</span>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:1rem">
+      <div class="tank-row">
+        <div class="vat" id="vat"><div class="liquid" id="liquid"></div></div>
+        <div class="stage-info">
+          <div class="name" id="stageName">—</div>
+          <div class="desc" id="stageDesc"></div>
+        </div>
+      </div>
+      <div class="daynav">
+        <span style="font-size:.8rem;font-weight:700">留後 <b id="dayLabel">0</b> 日目</span>
+        <input type="range" id="daySlider" min="0" max="30" step="1" value="30">
+      </div>
+    </div>
+
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="panel">
+    <div class="preset-row" id="presets">
+      <button data-p="standard" class="active">標準型</button>
+      <button data-p="ginjo">吟醸型</button>
+      <button data-p="hot">高温速攻</button>
+    </div>
+    <div id="controls"></div>
+    <div class="note">
+      <b>操作変数＝品温</b>。糖化（麹→糖）と発酵（酵母→酒）の速度を温度で操る。<br>
+      スライダーを動かすと即再計算。ランドマーク帯に曲線が乗るよう係数を詰める。
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== 醪発酵モデル v1.0（凍結 2026-07-13）=====
+// 仕様書: MOROMI_MODEL_SPEC.md（式・係数・温度スケジュール・破綻条件・典拠の正）
+// 変更する場合は仕様書のバージョンを必ず上げること。
+// ===== モデルパラメータ（校正対象） =====
+// 設計: 糖の総プールSr0とyeが「最終アルコール」を決める(ye*Sr0≒最終%)。
+//       瞬間の糖濃度Gは小さく保たれ、ボーメのピーク(7-8)を作る。
+const P = {
+  Sr0:   80,     // 糖の総プール(≒最終アルコール/ye/溶解率)
+  kdiss: 10.0,   // 溶解・糖化の基礎速度(Gへ供給)
+  kferm: 11.5,   // 発酵の基礎速度(Gを消費しEへ)
+  Km:    2.2,    // 発酵の半飽和(糖への依存)
+  Emax:  23,     // アルコール上限
+  ye:    0.245,  // 発酵1あたり生成するアルコール(最終%を決める)
+  kbG:   1.00,   // ボーメへの糖の寄与
+  kbE:   0.22,   // ボーメへのアルコール(負)寄与
+  t0:    2.5,    // 酵母立ち上がりの中心(日)
+  tau:   0.55,   // 酵母立ち上がりの鋭さ(日)
+  qS:    5.0,    // 糖化の温度係数(基準15℃, この値^((T-15)/8))
+  qF:    2.05,   // 発酵の温度係数
+};
+window.P=P;
+
+// ===== 温度スケジュール（操作変数） =====
+const SCHEDULES = {
+  standard:(d)=>{ if(d<5)return 9.5+d*1.0; if(d<9)return 14.5+(d-5)*0.5; if(d<18)return 16.5; return Math.max(12,16.5-(d-18)*0.6); },
+  ginjo:   (d)=>{ if(d<6)return 8+d*0.7; if(d<15)return 12.2-(d-6)*0.1; return Math.max(6,11.3-(d-15)*0.5); },
+  hot:     (d)=>{ if(d<3)return 11+d*2.0; if(d<12)return 17+(d-3)*0.4; return Math.max(14,20.6-(d-12)*0.7); },
+};
+let curPreset='standard';
+
+// UI-adjustable params
+const SLIDERS=[
+  {k:'kdiss',label:'糖化力（麹）',min:6,max:14,step:0.5},
+  {k:'kferm',label:'発酵力（酵母）',min:7,max:16,step:0.5},
+  {k:'t0',   label:'酵母の立ち上がり(日)',min:1.5,max:4,step:0.1},
+  {k:'ye',   label:'アルコール収率',min:0.18,max:0.30,step:0.005},
+  {k:'Emax', label:'アルコール上限',min:20,max:25,step:0.5},
+  {k:'qF',   label:'発酵の温度感度',min:1.5,max:2.6,step:0.05},
+];
+
+// ===== シミュレーション本体 =====
+function simulate(){
+  const dt=0.02, days=30, N=Math.round(days/dt);
+  const sched=SCHEDULES[curPreset];
+  let G=0, E=0, Sr=P.Sr0;             // 瞬間糖濃度, アルコール, 残糖プール
+  const rec=[];                        // 日次記録
+  let nextDay=0;
+  const q=(base,T)=>Math.pow(base,(T-15)/8);
+  for(let i=0;i<=N;i++){
+    const t=i*dt;
+    const T=sched(t);
+    const Y=1/(1+Math.exp(-(t-P.t0)/P.tau));      // 酵母活性(シグモイド立ち上がり)
+    // 末期の酵母減衰（高アルコール×高温）
+    const decay=Math.max(0, 1-(Math.max(0,E-14)/9)*Math.max(0,(T-13))/8);
+    const Yeff=Y*Math.max(0.15,decay);
+    const rs=P.kdiss*(Sr/P.Sr0)*q(P.qS,T);        // 溶解・糖化速度(残プール比例)
+    const rf=P.kferm*Yeff*(G/(G+P.Km))*q(P.qF,T)*Math.max(0,1-E/P.Emax); // 発酵速度
+    // 更新
+    G += (rs - rf)*dt;        if(G<0)G=0;
+    E += (P.ye*rf)*dt;        if(E>P.Emax)E=P.Emax;
+    Sr-= rs*dt;               if(Sr<0)Sr=0;
+    if(t>=nextDay){
+      const baume=P.kbG*G - P.kbE*E;
+      rec.push({day:nextDay, T:+T.toFixed(1), G:+G.toFixed(2), E:+E.toFixed(2),
+                baume:+baume.toFixed(2), co2:+rf.toFixed(3)});
+      nextDay++;
+    }
+  }
+  return rec;
+}
+
+// ===== 泡ステージ判定（CO2=発酵速度ベース＋日数） =====
+function stage(rec,day){
+  const r=rec[day]||rec[rec.length-1];
+  const co2=r.co2, E=r.E;
+  if(day<2) return ['仕込み直後','まだ泡はほとんど立たない'];
+  if(day<=3) return ['筋泡（すじあわ）','表面に数本の筋。発酵開始のサイン'];
+  if(day<=4) return ['水泡（カニ泡）','石けん状の薄い膜。まだ甘く酸少なめ'];
+  if(co2>=maxCo2(rec)*0.9) return ['高泡（たかあわ）','粘り高い泡がこんもり。発酵最盛'];
+  if(E<13&&co2>maxCo2(rec)*0.6) return ['岩泡（いわあわ）','泡が高く盛り岩のよう'];
+  if(E>=12&&co2>maxCo2(rec)*0.35) return ['落泡（おちあわ）','泡が大きく軽く。辛味を増す(Al12〜13%)'];
+  if(co2>maxCo2(rec)*0.12) return ['玉泡（たまあわ）','泡が減り粒状に'];
+  return ['地（じ）','泡が消え表面が静かに。上槽が近い'];
+}
+let _maxco2=null;
+function maxCo2(rec){ return Math.max(...rec.map(r=>r.co2)); }
+
+// ===== 描画 =====
+function draw(){
+  const rec=simulate();
+  const svg=document.getElementById('chart');
+  const W=720,H=380,pad={l:44,r:44,t:20,b:34};
+  const x=d=>pad.l+(d/30)*(W-pad.l-pad.r);
+  // 3系列スケール
+  const yB=v=>H-pad.b-((v-(-6))/(10-(-6)))*(H-pad.t-pad.b);   // ボーメ -6..10
+  const yE=v=>H-pad.b-((v-0)/(21-0))*(H-pad.t-pad.b);         // アルコール 0..21
+  const yT=v=>H-pad.b-((v-5)/(20-5))*(H-pad.t-pad.b);         // 温度 5..20
+  const path=(sel,fn)=>rec.map((r,i)=>(i?'L':'M')+x(r.day).toFixed(1)+' '+fn(r[sel]).toFixed(1)).join(' ');
+  let s='';
+  // grid
+  for(let d=0;d<=30;d+=5){ s+=`<line x1="${x(d)}" y1="${pad.t}" x2="${x(d)}" y2="${H-pad.b}" stroke="rgba(255,255,255,.05)"/><text x="${x(d)}" y="${H-pad.b+18}" fill="#a8a091" font-size="10" text-anchor="middle">${d}</text>`; }
+  s+=`<text x="${x(15)}" y="${H-6}" fill="#a8a091" font-size="10" text-anchor="middle">留後日数（日）</text>`;
+  // baume zero line
+  s+=`<line x1="${pad.l}" y1="${yB(0)}" x2="${W-pad.r}" y2="${yB(0)}" stroke="rgba(242,180,58,.25)" stroke-dasharray="4 3"/>`;
+  s+=`<text x="${pad.l-6}" y="${yB(0)+3}" fill="rgba(242,180,58,.6)" font-size="9" text-anchor="end">0</text>`;
+  // ランドマーク帯：最高ボーメ7-8 @ 3-4日
+  s+=`<rect x="${x(3)}" y="${yB(8)}" width="${x(4)-x(3)}" height="${yB(7)-yB(8)}" fill="rgba(242,180,58,.30)"/>`;
+  // ランドマーク帯：アルコール18-20 @ 24-26日
+  s+=`<rect x="${x(24)}" y="${yE(20)}" width="${x(26)-x(24)}" height="${yE(18)-yE(20)}" fill="rgba(242,180,58,.30)"/>`;
+  // curves
+  s+=`<path d="${path('T',yT)}" fill="none" stroke="var(--temp)" stroke-width="2" opacity=".85"/>`;
+  s+=`<path d="${path('baume',yB)}" fill="none" stroke="var(--baume)" stroke-width="2.5"/>`;
+  s+=`<path d="${path('E',yE)}" fill="none" stroke="var(--alc)" stroke-width="2.5"/>`;
+  // axis labels
+  s+=`<text x="6" y="${yB(8)}" fill="var(--baume)" font-size="9">Bé8</text>`;
+  s+=`<text x="${W-38}" y="${yE(20)}" fill="var(--alc)" font-size="9">20%</text>`;
+  svg.innerHTML=s;
+  drawStats(rec);
+  updateDay(rec);
+  window._rec=rec; // for console tuning
+}
+
+function drawStats(rec){
+  const maxB=Math.max(...rec.map(r=>r.baume));
+  const dayMaxB=rec.findIndex(r=>r.baume===maxB);
+  const e25=rec[25]?rec[25].E:rec[rec.length-1].E;
+  const eFin=rec[rec.length-1].E;
+  // 上槽推奨：日本酒度がプラス（ボーメ<0）方向で発酵が鈍る点
+  let pressDay=rec.findIndex((r,i)=>i>10 && r.co2<maxCo2(rec)*0.10);
+  if(pressDay<0)pressDay=rec.length-1;
+  const chk=(v,lo,hi)=>v>=lo&&v<=hi?'ok':'ng';
+  const S=[
+    ['最高ボーメ', maxB.toFixed(1)+' 度', chk(maxB,7,8)],
+    ['最高ボーメの日', dayMaxB+' 日目', chk(dayMaxB,3,4)],
+    ['25日目アルコール', e25.toFixed(1)+' %', chk(e25,17,20)],
+    ['最終アルコール', eFin.toFixed(1)+' %', chk(eFin,18,20)],
+    ['上槽推奨日', pressDay+' 日目', chk(pressDay,22,28)],
+    ['最高品温', Math.max(...rec.map(r=>r.T)).toFixed(1)+' ℃', 'ok'],
+  ];
+  document.getElementById('stats').innerHTML=S.map(x=>
+    `<div class="stat"><div class="l">${x[0]}</div><div class="v ${x[2]}">${x[1]}</div></div>`).join('');
+}
+
+function updateDay(rec){
+  const day=+document.getElementById('daySlider').value;
+  document.getElementById('dayLabel').textContent=day;
+  const r=rec[Math.min(day,rec.length-1)];
+  const [nm,desc]=stage(rec,day);
+  document.getElementById('stageName').textContent=nm;
+  document.getElementById('stageDesc').textContent=desc;
+  // liquid & bubbles
+  const liq=document.getElementById('liquid');
+  liq.style.height=(30+ (r.G/Math.max(...rec.map(x=>x.G)))*45)+'%';
+  const vat=document.getElementById('vat');
+  vat.querySelectorAll('.bub').forEach(b=>b.remove());
+  const intensity=Math.round((r.co2/maxCo2(rec))*14);
+  for(let i=0;i<intensity;i++){const b=document.createElement('div');b.className='bub';const sz=2+Math.random()*5;
+    b.style.width=b.style.height=sz+'px';b.style.left=(Math.random()*88+4)+'%';
+    b.style.animationDuration=(1.6+Math.random()*2)+'s';b.style.animationDelay=(Math.random()*2.5)+'s';vat.appendChild(b);}
+}
+
+// ===== コントロール生成 =====
+function buildControls(){
+  document.getElementById('controls').innerHTML=SLIDERS.map(s=>
+    `<div class="ctrl"><label>${s.label}<b id="val_${s.k}">${P[s.k]}</b></label>
+     <input type="range" id="sl_${s.k}" min="${s.min}" max="${s.max}" step="${s.step}" value="${P[s.k]}"></div>`).join('');
+  SLIDERS.forEach(s=>{
+    const el=document.getElementById('sl_'+s.k);
+    el.addEventListener('input',()=>{P[s.k]=+el.value;document.getElementById('val_'+s.k).textContent=el.value;draw();});
+  });
+}
+document.getElementById('presets').addEventListener('click',e=>{
+  if(e.target.dataset.p){curPreset=e.target.dataset.p;
+    document.querySelectorAll('#presets button').forEach(b=>b.classList.toggle('active',b===e.target));draw();}
+});
+document.getElementById('daySlider').addEventListener('input',()=>updateDay(window._rec));
+
+buildControls();
+draw();
+</script>
+</body>
+</html>

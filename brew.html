@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>あなたが、杜氏になる。｜日本酒づくり体験</title>
+<meta name="description" content="米選びから仕上げまで、7つの決断で自分だけの一本を醸す。実際の酒造りをなぞる日本酒体験。">
+<style>
+  :root{
+    --bg:#0b0a0d;--bg2:#141118;--ink:#f6f1e6;--ink-dim:#a8a091;
+    --blood:#ff2e17;--gold:#f2b43a;--foam:#fff7e6;--line:rgba(246,241,230,.14);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;overflow-x:hidden;font-weight:500;min-height:100svh}
+  body::after{content:"";position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.5;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .blood{color:var(--blood)}.gold{color:var(--gold)}
+  .wrap{max-width:680px;margin:0 auto;padding:clamp(1.4rem,5vw,2.4rem)}
+
+  /* HERO */
+  .hero{min-height:100svh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden;padding:2rem 1.4rem}
+  #foam{position:absolute;inset:0;z-index:0}
+  .hero .vig{position:absolute;inset:0;z-index:1;background:radial-gradient(120% 90% at 50% 40%,transparent 40%,rgba(0,0,0,.78) 100%)}
+  .hero>*{position:relative;z-index:2}
+  .kick{font-size:clamp(.6rem,1.5vw,.78rem);letter-spacing:.5em;color:var(--gold);font-weight:700;margin-bottom:1.4rem;padding-left:.5em}
+  .hero h1{font-weight:900;line-height:1.02;letter-spacing:-.02em;font-size:clamp(2.8rem,11vw,5.6rem)}
+  .hero h1 .b{color:var(--blood)}
+  .hero p{margin-top:1.8rem;max-width:27rem;color:var(--ink-dim);line-height:2;font-size:clamp(.95rem,2.4vw,1.08rem)}
+  .hero p b{color:var(--ink);font-weight:800}
+  .btn{margin-top:2.4rem;display:inline-flex;align-items:center;gap:.7rem;font-weight:800;letter-spacing:.12em;font-size:.95rem;
+    color:#0b0a0d;background:var(--blood);border:none;border-radius:100px;padding:1.05rem 2.2rem;cursor:pointer;transition:.25s;box-shadow:0 8px 30px rgba(255,46,23,.35)}
+  .btn:hover{transform:translateY(-2px);background:#ff4526}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+  .btn.ghost:hover{background:rgba(255,255,255,.05)}
+  .hint{margin-top:1.3rem;font-size:.75rem;color:var(--ink-dim);letter-spacing:.05em}
+
+  /* QUIZ */
+  #quiz{display:none;min-height:100svh;padding-top:clamp(2rem,7vw,4rem)}
+  .prog{display:flex;align-items:center;gap:.8rem;margin-bottom:2.2rem}
+  .prog .bar{flex:1;height:6px;border-radius:100px;background:var(--bg2);overflow:hidden}
+  .prog .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--gold),var(--blood));border-radius:100px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+  .prog .cnt{font-family:Arial;font-weight:900;font-size:.8rem;color:var(--ink-dim);letter-spacing:.1em;white-space:nowrap}
+  .qstep{font-weight:800;letter-spacing:.2em;font-size:.72rem;color:var(--gold);margin-bottom:.9rem}
+  .qtitle{font-weight:900;line-height:1.3;font-size:clamp(1.5rem,5vw,2.2rem)}
+  .qnote{color:var(--ink-dim);font-size:.92rem;line-height:1.8;margin-top:.9rem;padding-left:.9rem;border-left:2px solid var(--line)}
+  .opts{margin-top:1.8rem;display:flex;flex-direction:column;gap:.8rem}
+  .opt{text-align:left;background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:1.1rem 1.3rem;cursor:pointer;
+    transition:.2s;display:flex;align-items:center;gap:1rem;color:var(--ink);font:inherit}
+  .opt:hover{border-color:var(--blood);background:#1b1620;transform:translateX(4px)}
+  .opt .k{font-weight:900;font-size:1.1rem}
+  .opt .d{color:var(--ink-dim);font-size:.82rem;margin-top:.3rem;font-weight:500;line-height:1.5}
+  .opt .go{color:var(--blood);font-size:1.4rem;font-weight:900;flex:0 0 auto;opacity:.5;transition:.2s;margin-left:auto}
+  .opt:hover .go{opacity:1;transform:translateX(3px)}
+  .fade{animation:fade .45s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+
+  /* RESULT */
+  #result{display:none;padding-top:clamp(2rem,7vw,3.5rem);padding-bottom:4rem}
+  .r-eyebrow{text-align:center;font-weight:800;letter-spacing:.3em;font-size:.72rem;color:var(--gold);margin-bottom:1.2rem}
+  .r-name{text-align:center;font-weight:900;font-size:clamp(1.35rem,5vw,2rem);line-height:1.3;letter-spacing:.02em}
+  .r-spec{text-align:center;color:var(--gold);font-weight:800;font-size:clamp(.9rem,3vw,1.1rem);margin-top:.6rem;letter-spacing:.03em}
+  .meters-head{text-align:center;margin-top:2.4rem;font-weight:900;font-size:1.02rem}
+  .meters-head span{display:block;color:var(--ink-dim);font-size:.72rem;font-weight:700;letter-spacing:.06em;margin-top:.25rem}
+  .design-note{max-width:30rem;margin:2rem auto 0;border:1px solid rgba(255,46,23,.35);border-radius:14px;padding:1rem 1.2rem;background:rgba(255,46,23,.06);font-size:.86rem;line-height:1.75;font-weight:600;text-align:center}
+  .memo{max-width:30rem;margin:1.4rem auto 0;border:1px dashed rgba(242,180,58,.5);border-radius:14px;padding:1rem 1.2rem;background:rgba(242,180,58,.06);
+    color:var(--gold);font-size:.9rem;line-height:1.7;font-weight:700}
+  .meters{margin:1rem auto 0;max-width:30rem;display:flex;flex-direction:column;gap:.9rem}
+  .meter{display:grid;grid-template-columns:4.5rem 1fr;align-items:center;gap:.9rem}
+  .meter .lbl{font-weight:800;font-size:.85rem}
+  .meter .track{height:12px;border-radius:100px;background:var(--bg2);overflow:hidden;border:1px solid var(--line)}
+  .meter .track i{display:block;height:100%;width:0;border-radius:100px;background:linear-gradient(90deg,var(--gold),var(--blood));transition:width 1s cubic-bezier(.2,.8,.2,1)}
+  .recap{margin:2.2rem auto 0;max-width:30rem}
+  .recap .t{font-weight:800;font-size:.72rem;letter-spacing:.2em;color:var(--ink-dim);text-align:center;margin-bottom:1rem}
+  .recap ol{list-style:none;counter-reset:c;border:1px solid var(--line);border-radius:16px;overflow:hidden}
+  .recap li{counter-increment:c;padding:.7rem 1.1rem;display:flex;gap:.8rem;align-items:baseline;font-size:.86rem;border-bottom:1px solid var(--line);background:rgba(0,0,0,.15)}
+  .recap li:last-child{border-bottom:none}
+  .recap li::before{content:counter(c);font-family:Arial;font-weight:900;color:var(--blood);font-size:.8rem;flex:0 0 1rem}
+  .recap li .rc-k{font-weight:800;color:var(--ink)}
+  .recap li .rc-v{color:var(--ink-dim);margin-left:auto;text-align:right}
+  .r-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:.9rem;margin-top:2.6rem}
+  .r-foot{text-align:center;color:var(--ink-dim);font-size:.78rem;margin-top:1.6rem;line-height:1.7}
+  .r-foot b{color:var(--gold)}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero" id="hero">
+  <canvas id="foam"></canvas>
+  <div class="vig"></div>
+  <div class="kick">日本酒づくり体験 ／ BE THE BREWER</div>
+  <h1>あなたが、<br><span class="b">杜氏</span>になる。</h1>
+  <p>米選びから仕上げまで、<b>7つの決断</b>で<br><b>あなただけの一本</b>を醸す。<br>実際の酒造りを、順番になぞっていく。</p>
+  <button class="btn" onclick="start()">仕込みを始める →</button>
+  <div class="hint">所要2分 ／ 組み合わせは384通り</div>
+</header>
+
+<!-- QUIZ -->
+<main id="quiz"><div class="wrap">
+  <div class="prog">
+    <div class="bar"><i id="progbar"></i></div>
+    <div class="cnt" id="progcnt">1 / 7</div>
+  </div>
+  <div id="qbox"></div>
+</div></main>
+
+<!-- RESULT -->
+<section id="result"><div class="wrap">
+  <div class="r-eyebrow">決まった、仕込みの配合</div>
+  <div class="r-name" id="rname"></div>
+  <div class="r-spec" id="rspec"></div>
+  <div class="meters-head">狙う酒質<span>——この配合が向かう方向</span></div>
+  <div class="meters" id="rmeters"></div>
+  <div class="memo" id="rmemo" style="display:none"></div>
+  <div class="recap"><div class="t">選んだ配合</div><ol id="rrecap"></ol></div>
+  <div class="design-note">🍶 実際の<b>香り・度数・甘辛・銘柄</b>は、ここから<b>麹 → 酛 → 醪</b>と仕込んで、あなたの温度管理で決まります。</div>
+  <div id="rbrewcta" style="margin-top:1.4rem"></div>
+  <div class="r-actions">
+    <button class="btn ghost" onclick="restart()">別の配合を試す</button>
+    <a class="btn ghost" href="index.html">仕組みを学ぶ →</a>
+  </div>
+  <div class="r-foot">配合は<b>384通り</b>。<br>狙いを決めたら、いざ仕込み。</div>
+</div></section>
+
+<script>
+const QUESTIONS=[
+ {step:'STEP 01 ／ 原料処理・米選び',title:'まず、どのお米で醸す？',
+  note:'酒米は酒の土台。品種で、酒のキャラクターの方向が決まります。',
+  options:[
+   {k:'山田錦',d:'酒米の王様。良質な麹が造りやすく、上品でバランス抜群。大吟醸の定番',fx:{aroma:8,body:6},rice:'山田錦',rc:'万能・上品'},
+   {k:'五百万石',d:'淡麗できれい。キレのあるすっきり系。新潟の淡麗辛口の主役',fx:{aroma:4,body:-12,acid:-6,sweet:-2},rice:'五百万石',rc:'淡麗・キレ'},
+   {k:'美山錦',d:'寒冷地生まれ。軽快でシャープ、爽やかな味わい',fx:{aroma:6,body:-8,acid:2},rice:'美山錦',rc:'軽快・爽やか'},
+   {k:'雄町',d:'100年超の古豪。軟質で溶けやすく、濃醇でふくよか、ワイルド',fx:{aroma:-4,body:18,acid:6,sweet:4},rice:'雄町',rc:'濃醇・力強い'}]},
+ {step:'STEP 01 ／ 原料処理・精米',title:'お米を、どこまで磨く？',
+  note:'磨くほど雑味が消えて香りが立ち、削らないほど米の旨みが残ります。',
+  options:[
+   {k:'よく磨く',d:'精米歩合50%。雑味を削ぎ落とし、華やかに',fx:{aroma:18,body:-12,acid:-8},grade:'daiginjo',rc:'精米歩合50%'},
+   {k:'標準',d:'精米歩合60%。香りと旨みのバランス型',fx:{aroma:6,sweet:2},grade:'ginjo',rc:'精米歩合60%'},
+   {k:'あまり磨かない',d:'精米歩合70%。米の旨みとコクをたっぷり',fx:{aroma:-6,body:18,acid:6,sweet:6},grade:'junmai',rc:'精米歩合70%'}]},
+ {step:'STEP 02 ／ 製麹（麹づくり）',title:'麹の型は、どちらで？',
+  note:'麹菌の繁殖のさせ方で、糖化力が変わる。これが甘み・コクの土台になります。',
+  options:[
+   {k:'突き破精（つきはぜ）',d:'麹菌を米の内部中心に。糖化力ひかえめで、軽快な酒に',fx:{body:-8,aroma:6,sweet:-4},koji:'突き破精',rc:'軽快に'},
+   {k:'総破精（そうはぜ）',d:'麹菌を米全体に。糖化力が強く、濃醇でコクのある酒に',fx:{body:12,sweet:8,aroma:-4},koji:'総破精',rc:'濃醇に'}]},
+ {step:'STEP 03 ／ 酒母（酛づくり）',title:'酵母を育てる“もと”は？',
+  note:'乳酸の入れ方で、酒の骨格が決まる。ここは酒造りの分かれ道。',
+  options:[
+   {k:'速醸でクリーンに',d:'乳酸を加えて手早く。軽快でクセのない酒質',fx:{aroma:4,body:-6,acid:-10},moto:'sokujo',rc:'手早く安全に'},
+   {k:'生酛・山廃で攻める',d:'自然の乳酸菌を時間をかけて育てる。濃醇で複雑',fx:{aroma:-4,body:14,acid:20,sweet:-4},moto:'kimoto',rc:'時間をかけて複雑に'}]},
+ {step:'STEP 04 ／ 醪・酵母',title:'どんな酵母で仕込む？',
+  note:'酵母は香りの担い手。グラスに鼻を近づけた瞬間の印象が変わります。',
+  options:[
+   {k:'華やか系',d:'メロンや洋梨のような吟醸香がブンブン',fx:{aroma:22,body:-4,sweet:6},rc:'吟醸香を重視'},
+   {k:'穏やか系',d:'香りは控えめ。料理に寄り添う食中タイプ',fx:{aroma:-12,body:6},rc:'食中向けの香り'}]},
+ {step:'STEP 04 ／ 醪・発酵温度',title:'発酵の攻め方は？',
+  note:'醪（もろみ）の温度で発酵の性格が決まる。低温は華やかに、高温は力強く。',
+  options:[
+   {k:'低温でじっくり',d:'吟醸造り。きれいで澄んだ香り高い酒に',fx:{aroma:16,body:-8,acid:-4},rc:'吟醸造り'},
+   {k:'高温で力強く',d:'ボリュームとキレのある、辛口寄りの酒に',fx:{aroma:-10,body:16,acid:8,sweet:-6},rc:'力強く辛口に'}]},
+ {step:'STEP 05 ／ 上槽〜仕上げ',title:'最後、どう瓶に詰める？',
+  note:'火入れ・加水で安定、しなければ搾りたてのフレッシュさとパワーが残ります。',
+  options:[
+   {k:'火入れして割水',d:'定番の仕上げ。まろやかで安定した味わい',fx:{aroma:-4,body:-4},finish:'stable',rc:'火入れ＋加水で安定'},
+   {k:'無濾過・生・原酒',d:'搾ったほぼそのまま。フレッシュで濃厚、パワフル',fx:{aroma:8,body:12,acid:6,sweet:4},finish:'nama',rc:'無濾過・生・原酒'}]}
+];
+
+let idx=0, chosen=[];
+const $=s=>document.querySelector(s);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const find=p=>{for(const o of chosen) if(o[p]!==undefined) return o[p]; return null;};
+
+function start(){ $('#hero').style.display='none'; $('#quiz').style.display='block'; idx=0; chosen=[]; render(); window.scrollTo(0,0); }
+function restart(){ $('#result').style.display='none'; $('#hero').style.display='flex'; idx=0; chosen=[]; window.scrollTo(0,0); }
+
+function render(){
+  const q=QUESTIONS[idx];
+  $('#progbar').style.width=((idx)/QUESTIONS.length*100)+'%';
+  $('#progcnt').textContent=(idx+1)+' / '+QUESTIONS.length;
+  let html='<div class="fade"><div class="qstep">'+q.step+'</div><div class="qtitle">'+q.title+'</div><div class="qnote">'+q.note+'</div><div class="opts">';
+  q.options.forEach((o,i)=>{
+    html+='<button class="opt" onclick="choose('+i+')"><div><div class="k">'+o.k+'</div><div class="d">'+o.d+'</div></div><div class="go">→</div></button>';
+  });
+  html+='</div></div>';
+  $('#qbox').innerHTML=html;
+}
+
+function choose(i){
+  chosen.push(QUESTIONS[idx].options[i]);
+  if(idx<QUESTIONS.length-1){ idx++; render(); window.scrollTo({top:0,behavior:'smooth'}); }
+  else{ $('#progbar').style.width='100%'; showResult(); }
+}
+
+function showResult(){
+  let m={aroma:50,body:50,sweet:50,acid:50};
+  chosen.forEach(o=>{if(o.fx)for(const k in o.fx) m[k]=(m[k]||50)+o.fx[k];});
+  for(const k in m) m[k]=clamp(m[k],6,98);
+
+  const rice=find('rice'), grade=find('grade'), koji=find('koji'), moto=find('moto'), finish=find('finish');
+
+  let base = grade==='daiginjo'?'純米大吟醸' : grade==='ginjo'?'純米吟醸' : '純米酒';
+  let spec = (moto==='kimoto'?'生酛 ':'') + rice + ' ' + base + (finish==='nama'?' 無濾過生原酒':'');
+
+  const taste = m.sweet>=62 && m.acid<56 ? '甘口' : (m.sweet<=46 || m.acid>=64 ? '辛口' : '中口');
+
+  // 狙う方向（この配合が向かうタイプ）
+  const bucket = moto==='kimoto'?'kimoto' : (finish==='nama'&&m.aroma>58?'nama' : (m.aroma>66?'kaori' : (m.body>64?'koku' : (taste==='辛口'?'dry':'bal'))));
+
+  // 杜氏メモ（配合の狙いへの一言）
+  let memo='';
+  if((rice==='雄町'||rice==='五百万石') && grade==='daiginjo')
+    memo='杜氏メモ：'+rice+'は心白が大きく高精白が難しい米。50%まで磨く、攻めた配合です。';
+  else if(rice==='山田錦' && grade==='daiginjo' && koji==='突き破精' && m.aroma>70)
+    memo='杜氏メモ：山田錦を磨き込み、低温で華やかに——鑑評会の王道を狙う配合です。';
+  else if(rice==='五百万石' && taste==='辛口')
+    memo='杜氏メモ：五百万石で淡麗辛口。新潟の真骨頂を狙う。';
+  else if(rice==='雄町' && moto==='kimoto')
+    memo='杜氏メモ：雄町×生酛。濃醇好きにはたまらない、腰の据わった組み合わせ。';
+  else if(rice==='美山錦' && m.aroma>62 && m.body<50)
+    memo='杜氏メモ：美山錦で軽快な吟醸。信州や東北らしい、澄んだ狙い。';
+  else if(koji==='総破精' && finish==='nama' && m.body>66)
+    memo='杜氏メモ：総破精麹の無濾過生原酒。飲みごたえたっぷりの“濃い”酒を狙う配合。';
+
+  $('#rname').textContent=spec;                            // 種別＝仕込む酒の設計
+  $('#rspec').textContent='狙い：'+bucketLabel(bucket);     // この配合が向かう方向
+  const memoEl=$('#rmemo');
+  if(memo){memoEl.textContent=memo;memoEl.style.display='block';} else {memoEl.style.display='none';}
+  const meters=[['香り',m.aroma],['コク',m.body],['甘み',m.sweet],['酸味',m.acid]];
+  $('#rmeters').innerHTML=meters.map(x=>'<div class="meter"><div class="lbl">'+x[0]+'</div><div class="track"><i data-w="'+Math.round(x[1])+'"></i></div></div>').join('');
+  $('#rrecap').innerHTML=chosen.map(o=>'<li><span class="rc-k">'+o.k+'</span><span class="rc-v">'+o.rc+'</span></li>').join('');
+
+  // ===== この配合で、実際に仕込む（チェーンへ接続）=====
+  // 米・精米・酵母＋麹型・酒母型を koji.html へ渡す。以降 koji→moto→醪 が設定を引き継ぐ。
+  const riceId={'山田錦':'yamada','五百万石':'gohyaku','美山錦':'miyama','雄町':'omachi'}[rice]||'yamada';
+  const yeast = chosen.some(o=>o.k==='華やか系')?'kaori':(chosen.some(o=>o.k==='穏やか系')?'odaya':'');
+  const haze = koji==='総破精'?'sou':(koji==='突き破精'?'tsuki':'');
+  const bp=new URLSearchParams();
+  bp.set('rice',riceId); if(grade)bp.set('polish',grade); if(yeast)bp.set('yeast',yeast);
+  if(haze)bp.set('haze',haze); if(moto)bp.set('moto',moto);
+  $('#rbrewcta').innerHTML=`<a class="btn" style="width:100%;box-sizing:border-box" href="koji.html?${bp}">🍶 この配合で、実際に仕込む →</a>`+
+    `<div style="color:var(--ink-dim);font-size:.8rem;margin-top:.7rem;line-height:1.6">設計はここまで。次は<b style="color:var(--ink)">杜氏として温度管理</b>——麹 → 酛 → 醪を、自分の手で。</div>`;
+
+  $('#quiz').style.display='none';
+  $('#result').style.display='block';
+  window.scrollTo(0,0);
+  requestAnimationFrame(()=>setTimeout(()=>document.querySelectorAll('.meter .track i').forEach(i=>i.style.width=i.dataset.w+'%'),120));
+}
+
+function bucketLabel(b){return {kaori:'華やか・繊細',koku:'芳醇・コク',kimoto:'複雑・力強い',nama:'フレッシュ',dry:'辛口・キレ',bal:'バランス'}[b];}
+
+// hero foam
+const cv=document.getElementById('foam'),ctx=cv.getContext('2d');let W,H,parts;
+function size(){W=cv.width=innerWidth*devicePixelRatio;H=cv.height=innerHeight*devicePixelRatio;cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';init()}
+function init(){parts=[];const c=Math.min(90,Math.floor(innerWidth/12));for(let i=0;i<c;i++)parts.push(mk())}
+function mk(){return{x:Math.random()*W,y:H+Math.random()*H,r:(1+Math.random()*3.5)*devicePixelRatio,v:(.3+Math.random()*1)*devicePixelRatio,a:.1+Math.random()*.45,c:Math.random()<.22?'242,180,58':(Math.random()<.35?'255,46,23':'246,241,230')}}
+function draw(){ctx.clearRect(0,0,W,H);for(const p of parts){p.y-=p.v;p.x+=Math.sin(p.y*.01)*.4*devicePixelRatio;if(p.y<-10){Object.assign(p,mk());p.y=H+10}ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fillStyle='rgba('+p.c+','+p.a+')';ctx.fill()}requestAnimationFrame(draw)}
+addEventListener('resize',size);size();draw();
+</script>
+</body>
+</html>

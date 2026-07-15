@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>麹を、つくる。｜製麹の温度管理</title>
+<style>
+  :root{
+    --bg:#0b0a0d;--bg2:#141118;--ink:#f6f1e6;--ink-dim:#a8a091;
+    --blood:#ff2e17;--gold:#f2b43a;--foam:#fff7e6;--line:rgba(246,241,230,.14);
+    --temp:#ff6a3d;--growth:#8ad36b;--warn:#ff9d2e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Hiragino Sans",sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.6}
+  body::after{content:"";position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.5;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .wrap{max-width:640px;margin:0 auto;padding:1.2rem}
+  .blood{color:var(--blood)}.gold{color:var(--gold)}
+
+  #intro{min-height:100svh;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:2rem 1.4rem}
+  #intro .kick{letter-spacing:.4em;color:var(--gold);font-size:.72rem;font-weight:700;margin-bottom:1.2rem}
+  #intro h1{font-weight:900;font-size:clamp(2.2rem,9vw,3.6rem);line-height:1.1}
+  #intro p{color:var(--ink-dim);margin:1.6rem auto 0;max-width:27rem}
+  #intro .goal{border:1px solid var(--line);border-radius:14px;padding:1.1rem;margin:1.8rem auto 0;max-width:25rem;background:var(--bg2);text-align:left;font-size:.9rem}
+  #intro .goal b{color:var(--gold)}
+  .target-row{display:flex;gap:.7rem;margin:1.4rem auto 0;max-width:25rem}
+  .target-row .t{flex:1;border:1px solid var(--line);border-radius:12px;padding:.9rem;background:var(--bg2);cursor:pointer;font-size:.85rem}
+  .target-row .t.on{border-color:var(--blood);background:#1b1620}
+  .target-row .t b{display:block;font-size:1rem;margin-bottom:.2rem}
+  .btn{margin-top:1.6rem;display:inline-block;font-weight:800;letter-spacing:.1em;color:#0b0a0d;background:var(--blood);border:none;border-radius:100px;padding:1rem 2.2rem;cursor:pointer;font-size:.95rem;box-shadow:0 8px 26px rgba(255,46,23,.32)}
+  .btn:hover{background:#ff4526;transform:translateY(-2px)}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+
+  #game{display:none}
+  .topbar{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.7rem}
+  .topbar .hr{font-weight:900;font-size:1.05rem}
+  .topbar .hr b{color:var(--gold);font-family:Arial}
+  .topbar .phase{font-size:.82rem;color:var(--ink-dim)}
+  .chart-wrap{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:.7rem}
+  svg.chart{width:100%;height:auto;display:block}
+  .legend{display:flex;gap:1rem;font-size:.72rem;margin-top:.4rem;color:var(--ink-dim)}
+  .legend i{width:14px;height:3px;border-radius:2px;display:inline-block;margin-right:.3rem;vertical-align:middle}
+
+  .rice-row{display:flex;align-items:center;gap:1rem;margin-top:.9rem;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:.9rem}
+  .rice{width:76px;height:76px;border-radius:10px;background:#d8cbb0;position:relative;overflow:hidden;flex:0 0 auto}
+  .rice .mold{position:absolute;inset:0;background:radial-gradient(circle at 30% 30%,#fff 0 8%,transparent 9%),radial-gradient(circle at 65% 55%,#fff 0 10%,transparent 11%),radial-gradient(circle at 45% 75%,#fff 0 7%,transparent 8%),radial-gradient(circle at 80% 25%,#fff 0 6%,transparent 7%);opacity:0;transition:opacity .4s}
+  .rice-info .haze{font-weight:800;font-size:.95rem}
+  .rice-info .sub{font-size:.76rem;color:var(--ink-dim)}
+
+  .readout{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:.8rem}
+  .ro{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:.55rem;text-align:center}
+  .ro .l{font-size:.62rem;color:var(--ink-dim)}
+  .ro .v{font-weight:900;font-size:1.1rem;margin-top:.1rem}
+
+  .warn{margin-top:.8rem;border-radius:10px;padding:.7rem .9rem;font-size:.85rem;font-weight:700;display:none}
+  .warn.show{display:block}
+  .warn.danger{background:rgba(255,46,23,.14);border:1px solid var(--blood);color:#ff8a76}
+  .warn.caution{background:rgba(255,157,46,.12);border:1px solid var(--warn);color:var(--warn)}
+
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:1rem}
+  .actions .btn{margin:0;padding:.85rem;text-align:center;font-size:.9rem}
+  .actions .btn.wide{grid-column:1 / -1}
+  .actions .btn.sub{background:var(--bg2);color:var(--ink);border:1px solid var(--line);box-shadow:none}
+  .actions .btn.sub:hover{border-color:var(--gold);background:#1b1620}
+  .actions .btn.sub.on{border-color:var(--gold);color:var(--gold)}
+
+  #result{display:none;text-align:center}
+  #result .eyebrow{letter-spacing:.3em;color:var(--gold);font-size:.72rem;font-weight:800;margin-bottom:1rem}
+  #result .grade{font-weight:900;font-size:clamp(2rem,9vw,3rem)}
+  #result .stars{font-size:1.6rem;margin-top:.8rem;letter-spacing:.2em}
+  #result .comment{color:var(--ink);font-size:1.05rem;margin:1.2rem auto 0;max-width:28rem;font-weight:600}
+  #result .spec{display:grid;grid-template-columns:repeat(2,1fr);gap:.7rem;margin:1.8rem auto 0;max-width:24rem}
+  #result .spec .s{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:.8rem}
+  #result .spec .s .l{font-size:.66rem;color:var(--ink-dim)}
+  #result .spec .s .v{font-weight:900;font-size:1.15rem;margin-top:.15rem}
+  #result .bridge{margin:1.6rem auto 0;max-width:26rem;border:1px dashed rgba(242,180,58,.5);border-radius:12px;padding:1rem;font-size:.86rem;color:var(--gold);font-weight:700;background:rgba(242,180,58,.06)}
+</style>
+</head>
+<body>
+
+<!-- INTRO -->
+<section id="intro">
+  <div class="kick">一麹 二酛 三造り ／ MAKING KOJI</div>
+  <div style="display:flex;gap:.55rem;justify-content:center;font-size:.72rem;font-weight:800;letter-spacing:.08em;color:var(--ink-dim);margin-bottom:1.4rem"><span class="blood">① 麹</span><span>→</span><span>② 酛</span><span>→</span><span>③ 醪</span></div>
+  <h1>麹を、<span class="blood">つくる</span>。</h1>
+  <p>蒸した米に麹菌をふりかけた。ここから約2日、麹室（こうじむろ）の中で菌が育つ。菌は<b style="color:var(--ink)">自ら熱を出す</b>——放っておくと焼ける。<b style="color:var(--gold)">手入れ（ほぐして冷ます）</b>のタイミングが全て。</p>
+  <div id="vintageCard"></div>
+  <div class="goal">🎯 <b>ねらい</b>：菌を焼かず（品温を上げすぎず）に育て、糖化力の高い麹に。<b>どんな麹を目指す？</b></div>
+  <div class="target-row">
+    <div class="t on" data-t="sou" onclick="pickTarget('sou',this)"><b>総破精（そうはぜ）</b>菌を内部まで。糖化力強く濃醇な酒向き。<br><span style="color:var(--ink-dim)">→ 湿り気を保ち気味に</span></div>
+    <div class="t" data-t="tsuki" onclick="pickTarget('tsuki',this)"><b>突き破精（つきはぜ）</b>表面はまばら。軽快な吟醸向き。<br><span style="color:var(--ink-dim)">→ 手入れで乾かし気味に</span></div>
+  </div>
+  <div><button class="btn" onclick="startGame()">床もみ open！</button></div>
+</section>
+
+<!-- GAME -->
+<section id="game"><div class="wrap">
+  <div class="topbar">
+    <div class="hr">経過 <b id="hr">0</b> 時間</div>
+    <div class="phase" id="phase">床もみ</div>
+  </div>
+
+  <div class="chart-wrap">
+    <svg class="chart" id="chart" viewBox="0 0 620 260"></svg>
+    <div class="legend">
+      <span><i style="background:var(--temp)"></i>品温℃</span>
+      <span><i style="background:var(--growth)"></i>麹菌の繁殖</span>
+      <span><i style="background:rgba(242,180,58,.3)"></i>良い温度帯</span>
+    </div>
+  </div>
+
+  <div class="rice-row">
+    <div class="rice"><div class="mold" id="mold"></div></div>
+    <div class="rice-info">
+      <div class="haze" id="haze">破精まわり：これから</div>
+      <div class="sub" id="hazeSub">白い菌糸が米に回っていく</div>
+    </div>
+  </div>
+
+  <div class="readout">
+    <div class="ro"><div class="l">品温</div><div class="v" id="roT">32.0<small>℃</small></div></div>
+    <div class="ro"><div class="l">水分</div><div class="v" id="roM">—</div></div>
+    <div class="ro"><div class="l">糖化力（酵素）</div><div class="v" id="roE">0</div></div>
+  </div>
+
+  <div class="warn" id="warn"></div>
+
+  <div class="actions">
+    <button class="btn sub" onclick="tenire()">手入れする（ほぐして冷ます）</button>
+    <button class="btn sub on" id="cloth" onclick="toggleCloth()">布をかける：ON</button>
+    <button class="btn sub wide" onclick="advance()">2時間 ようすを見る →</button>
+    <button class="btn wide" id="finishBtn" onclick="finish()" disabled>出麹（仕上げる）</button>
+  </div>
+</div></section>
+
+<!-- RESULT -->
+<section id="result"><div class="wrap">
+  <div class="eyebrow">できあがった、あなたの麹</div>
+  <div class="grade" id="rgrade"></div>
+  <div class="stars" id="rstars"></div>
+  <div class="comment" id="rcomment"></div>
+  <div class="spec" id="rspec"></div>
+  <div class="bridge" id="rbridge"></div>
+  <div id="rcta" style="margin-top:1.6rem"></div>
+  <div style="margin-top:1rem"><button class="btn" onclick="location.reload()" style="background:transparent;color:var(--ink);border:1px solid var(--line);box-shadow:none">麹をつくり直す</button></div>
+</div></section>
+
+<script>
+// ===== 製麹モデル（赤本準拠に再校正 2026-07-14）=====
+// 典拠『清酒製造技術』(赤本/日本醸造協会) 第V章：麹室32〜38℃、もみ上げ32〜33℃、盛り35〜36℃、
+//   仲仕事35〜36→38〜39℃、仕舞38〜39℃、積替え/出麹前40℃前後、麹菌の発芽・増殖の最適温度は35℃。約44〜48h。
+//   (『日本酒の基』2.製法とも一致)。以前の"出麹前42〜43℃"は資料より2〜3℃高く、40℃前後へ修正。
+// 校正の要点: 発熱を「繁殖“量”growth」に比例させ rg(繁殖速度)とkh(発熱)を分離。序盤は菌が少なく熱が出ない
+//   →温度が上がりすぎず育つ→後半に熱が乗り出麹前40℃へ。放置＝焼けてenzyme低(1★)/良プレイ＝出麹40℃・enzyme高。
+const K={
+  rg:15,        // 繁殖の基礎速度（発熱とは独立）
+  kh:2.5,       // 発熱係数（繁殖“量”growth→品温上昇）
+  kcCov:0.15,   // 冷却(布あり)
+  kcOpen:0.25,  // 冷却(布なし)
+  ambient:29,   // 麹室の下限温度
+  evapCov:0.22, // 水分蒸発(布あり)
+  evapOpen:0.6, // 水分蒸発(布なし)
+  tOpt:35,      // 繁殖に最適な品温（赤本：発芽・増殖の最適35℃前後）
+  tWid:8,       // 温度適性の幅
+  ke:2.1,       // 酵素力の蓄積係数（繁殖“量”に比例）
+};
+let hr=0, temp=32, growth=2, moisture=42, enzyme=0;
+let cloth=true, target='sou';
+let rec=[{hr:0,temp:32,growth:2}], moistSum=42, moistN=1, tenireCount=0, overheatHr=0, maxT=32;
+
+const $=s=>document.querySelector(s);
+
+// ===== 米（今年の米 or brewで選んだ米）=====
+// brewから ?rice=&polish= が来ればそれを使い、なければランダムな「今年の年柄」を引く。溶け具合→糖化力/Sr0、タンパク→アミノ酸。麹→酛→醪へ持ち回す。
+const VINTAGES=[
+  {n:'穏やかな年',            d:1.00, p:0,   c:'例年並みの米。教科書どおりに運べる。'},
+  {n:'やわらかく溶けやすい年', d:1.10, p:0,   c:'よく溶ける米。糖化が乗り高アルコールも狙えるが、溶けすぎ・雑味に注意。'},
+  {n:'硬く溶けにくい年',      d:0.90, p:-3,  c:'溶けにくい米。糖化が伸びにくく最終アルは低め。焼かずしっかり破精込ませたい。'},
+  {n:'高タンパクの年',        d:0.98, p:12,  c:'タンパクが多い米。コクは出るが雑味・重さのリスク。'},
+  {n:'小粒だが良質の年',      d:1.05, p:-5,  c:'締まった良い米。クリーンに仕上がりやすい。'},
+];
+const RICE={ yamada:{n:'山田錦',d:1.02,p:0,c:'酒米の王様。良質な麹が造りやすくバランス抜群。'},
+  gohyaku:{n:'五百万石',d:0.94,p:-4,c:'淡麗できれい。キレのあるすっきり系。'},
+  miyama:{n:'美山錦',d:0.96,p:-3,c:'寒冷地生まれ。軽快でシャープ。'},
+  omachi:{n:'雄町',d:1.12,p:6,c:'軟質で溶けやすく、濃醇でふくよか。'} };
+const POLISH={daiginjo:{p:-8,l:'精米50%'}, ginjo:{p:-2,l:'精米60%'}, junmai:{p:6,l:'精米70%'}};
+const _carry=new URLSearchParams(location.search);
+const riceSrc=(function(){
+  if(_carry.has('rice')){ const r=RICE[_carry.get('rice')]||RICE.yamada; const pol=POLISH[_carry.get('polish')];
+    const q=new URLSearchParams({rice:_carry.get('rice')}); if(_carry.get('polish'))q.set('polish',_carry.get('polish'));
+    return {name:r.n+(pol?`・${pol.l}`:''), d:r.d, p:r.p+(pol?pol.p:0), c:r.c, param:q.toString(), chosen:true}; }
+  const v=parseInt(_carry.get('vin')); const i=(isFinite(v)&&v>=0&&v<VINTAGES.length)?v:Math.floor(Math.random()*VINTAGES.length);
+  const vv=VINTAGES[i]; return {name:vv.n, d:vv.d, p:vv.p, c:vv.c, param:`vin=${i}`, chosen:false};
+})();
+const vinTokaFactor=()=>0.6+0.4*riceSrc.d;   // 溶け具合→麹の糖化力（ゆるやか）
+function renderVintage(){ const el=$('#vintageCard'); if(!el)return; const v=riceSrc;
+  el.innerHTML=`<div class="goal" style="border-color:var(--gold)">🌾 <b>${v.chosen?'選んだ米':'今年の米'}</b>：<b class="gold">${v.name}</b><br>`+
+    `<span style="color:var(--ink-dim);font-size:.82rem">${v.c}${v.d<1?' ← 硬い/淡麗な米は糖化力が出にくい。':v.d>1?' ← 溶けやすい米は糖化力が乗りやすい。':''}</span></div>`; }
+// brewからの麹型指定があれば破精ターゲットを初期選択
+(function initHaze(){ const h=_carry.get('haze'); if(h==='sou'||h==='tsuki'){ target=h;
+  document.querySelectorAll('.target-row .t').forEach(x=>x.classList.toggle('on',x.dataset.t===target)); } })();
+
+function pickTarget(t,el){target=t;document.querySelectorAll('.target-row .t').forEach(x=>x.classList.toggle('on',x===el));}
+function startGame(){$('#intro').style.display='none';$('#game').style.display='block';draw();refresh();}
+function toggleCloth(){cloth=!cloth;$('#cloth').textContent='布をかける：'+(cloth?'ON':'OFF');$('#cloth').classList.toggle('on',cloth);}
+
+const tempF=T=>Math.exp(-Math.pow((T-K.tOpt)/K.tWid,2));
+const moistF=m=>m/(m+12);
+
+// dtTotal(時間)分を積分
+function integrate(dtTotal){
+  const dt=0.25, n=Math.round(dtTotal/dt);
+  for(let i=0;i<n;i++){
+    hr+=dt;
+    const gRate=K.rg*tempF(temp)*moistF(moisture)*(1-growth/100);
+    growth+=gRate*dt; if(growth>100)growth=100;
+    const kc=cloth?K.kcCov:K.kcOpen;
+    // 発熱は繁殖“量”growthに比例（後半に熱が乗る）。rgとは独立。
+    temp+=(K.kh*(growth/100) - kc*(temp-K.ambient))*dt;
+    const evap=(cloth?K.evapCov:K.evapOpen)*(1+(temp-32)/22);
+    moisture-=evap*dt; if(moisture<5)moisture=5;
+    const pen=temp>41?Math.max(0,1-(temp-41)/4):1;
+    // 酵素も定着した菌量growthに比例して蓄積（41℃超＝焼けでpen低下。赤本：出麹40℃前後）
+    enzyme+=K.ke*(growth/100)*pen*dt; if(enzyme>100)enzyme=100;
+    if(temp>42)overheatHr+=dt;
+    if(temp>maxT)maxT=temp;
+    moistSum+=moisture;moistN++;
+  }
+  rec.push({hr:Math.round(hr),temp,growth});
+}
+function advance(){ if(hr>=46)return; integrate(2); draw(); refresh(); }
+function tenire(){ temp-=4.2; moisture-=1.8; if(moisture<5)moisture=5; tenireCount++; integrate(0.5); draw(); refresh(); }
+
+function phaseName(h){
+  if(h<6)return'床もみ';if(h<16)return'切り返し';if(h<26)return'盛り';if(h<34)return'仲仕事';if(h<42)return'仕舞仕事';return'出麹どき';
+}
+function refresh(){
+  $('#hr').textContent=Math.round(hr);
+  $('#phase').textContent=phaseName(hr);
+  $('#roT').innerHTML=temp.toFixed(1)+'<small>℃</small>';
+  $('#roM').textContent=Math.round(moisture)+' /しっとり';
+  $('#roE').textContent=Math.round(enzyme);
+  $('#mold').style.opacity=(growth/100*0.9).toFixed(2);
+  const inner=moistSum/moistN;
+  $('#haze').textContent=growth<30?'破精まわり：これから':(growth<70?'破精まわり：進行中':'破精まわり：しっかり');
+  $('#hazeSub').textContent=inner>=31?'湿り気を保ち、内部へ回っている（総破精寄り）':'乾き気味、表面はまばら（突き破精寄り）';
+  $('#finishBtn').disabled=!(hr>=36 || growth>=90);
+  checkWarn();
+}
+function checkWarn(){
+  const w=$('#warn');let msg='',cls='';
+  if(temp>42){msg='🔥 焼けそう！品温が高すぎ（出麹は40℃前後）。手入れして冷まそう。';cls='danger';}
+  else if(temp>40){msg='⚠ かなり熱い。そろそろ手入れの頃合い。';cls='caution';}
+  else if(temp<30&&hr>4){msg='❄ 冷えて繁殖が鈍い。布をかけて保温しよう。';cls='caution';}
+  else if(moisture<14&&growth<70){msg='⚠ 乾かしすぎ。ハゼの回りが悪くなる。';cls='caution';}
+  else if(hr>=36){msg='✅ よく育った。出麹（仕上げ）の頃合い。';cls='caution';}
+  if(msg){w.textContent=msg;w.className='warn show '+cls;}else{w.className='warn';}
+}
+
+function draw(){
+  const svg=$('#chart'),W=620,H=260,pad={l:34,r:34,t:14,b:24},XM=46;
+  const x=h=>pad.l+(h/XM)*(W-pad.l-pad.r);
+  const yT=v=>H-pad.b-((v-26)/(46-26))*(H-pad.t-pad.b);
+  const yG=v=>H-pad.b-((v-0)/(100))*(H-pad.t-pad.b);
+  let s='';
+  s+=`<rect x="${pad.l}" y="${yT(40)}" width="${W-pad.l-pad.r}" height="${yT(32)-yT(40)}" fill="rgba(242,180,58,.10)"/>`;
+  s+=`<line x1="${pad.l}" y1="${yT(42)}" x2="${W-pad.r}" y2="${yT(42)}" stroke="rgba(255,46,23,.4)" stroke-dasharray="4 3"/>`;
+  s+=`<text x="${W-pad.r}" y="${yT(42)-3}" fill="rgba(255,46,23,.6)" font-size="8" text-anchor="end">焼け 42℃</text>`;
+  for(let h=0;h<=45;h+=6){s+=`<line x1="${x(h)}" y1="${pad.t}" x2="${x(h)}" y2="${H-pad.b}" stroke="rgba(255,255,255,.04)"/><text x="${x(h)}" y="${H-pad.b+15}" fill="#a8a091" font-size="8" text-anchor="middle">${h}</text>`;}
+  const P2=(sel,fn)=>rec.map((r,i)=>(i?'L':'M')+x(r.hr).toFixed(1)+' '+fn(r[sel]).toFixed(1)).join(' ');
+  s+=`<path d="${P2('growth',yG)}" fill="none" stroke="var(--growth)" stroke-width="2" opacity=".75"/>`;
+  s+=`<path d="${P2('temp',yT)}" fill="none" stroke="var(--temp)" stroke-width="2.5"/>`;
+  const last=rec[rec.length-1];
+  s+=`<circle cx="${x(last.hr)}" cy="${yT(last.temp)}" r="3.5" fill="var(--temp)"/>`;
+  svg.innerHTML=s;
+}
+
+function finish(){
+  const avgMoist=moistSum/moistN;
+  const style=avgMoist>=31?'sou':'tsuki';
+  const styleName=style==='sou'?'総破精（そうはぜ）':'突き破精（つきはぜ）';
+  const toka=Math.min(100,Math.round(enzyme*(style==='sou'?1.0:0.82)*vinTokaFactor()));
+  const matched=style===target;
+  let stars=3,grade='',comment='';
+  const clean=overheatHr<2 && maxT<=41.5;
+  if(overheatHr>=4){grade='焼き杜氏…';stars=1;comment='品温を上げすぎて麹を焼いてしまった。酵素力がガタ落ち。手入れをもっと早めに。';}
+  else if(clean && enzyme>=70 && matched){grade='麹の名手！';stars=5;comment='焼かずにしっかり育て、狙いの破精型にぴたり。糖化力の高い理想の麹。';}
+  else if(clean && enzyme>=60){grade='good麹屋';stars=4;comment='大きな焼けもなく、よく破精の回った麹に仕上がった。';}
+  else if(enzyme<45){grade='育て不足？';stars=2;comment='繁殖が伸びきらず、糖化力の弱い麹に。温度帯のキープと出麹の見極めを。';}
+  else{grade='まずまず麹';stars=3;comment='ひとまず麹にはなった。手入れのリズムを掴むと、もう一段よくなる。';}
+  $('#game').style.display='none';$('#result').style.display='block';
+  $('#rgrade').textContent=grade;
+  $('#rstars').textContent='★★★★★☆☆☆☆☆'.slice(5-stars,10-stars);
+  $('#rcomment').textContent=comment;
+  $('#rspec').innerHTML=
+    `<div class="s"><div class="l">破精型</div><div class="v" style="font-size:.98rem">${styleName}</div></div>`+
+    `<div class="s"><div class="l">狙いと一致</div><div class="v">${matched?'○ 一致':'× ずれ'}</div></div>`+
+    `<div class="s"><div class="l">糖化力</div><div class="v">${toka} / 100</div></div>`+
+    `<div class="s"><div class="l">最高品温</div><div class="v">${maxT.toFixed(1)}℃</div></div>`;
+  $('#rbridge').innerHTML=`🔗 この麹の<b>糖化力 ${toka}</b> と <b>${styleName}</b> が、次の「醪」の糖化スピード（kdiss）になる。総破精なら濃醇に、突き破精なら軽快に。`;
+  const p=new URLSearchParams(riceSrc.param);
+  p.set('toka',toka); p.set('haze',style);
+  if(_carry.get('yeast')) p.set('yeast',_carry.get('yeast'));
+  if(_carry.get('moto')) p.set('moto',_carry.get('moto'));
+  $('#rcta').innerHTML=`<a class="btn" href="moto.html?${p}">🍶 この麹で酛を建てる →</a>`;
+}
+renderVintage();
+</script>
+</body>
+</html>

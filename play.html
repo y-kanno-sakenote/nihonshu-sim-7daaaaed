@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>醪を、育てる。｜杜氏の温度管理</title>
+<style>
+  :root{
+    --bg:#0b0a0d;--bg2:#141118;--ink:#f6f1e6;--ink-dim:#a8a091;
+    --blood:#ff2e17;--gold:#f2b43a;--foam:#fff7e6;--line:rgba(246,241,230,.14);
+    --baume:#f2b43a;--alc:#ff2e17;--temp:#5fa8ff;--warn:#ff9d2e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Hiragino Sans",sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.6}
+  body::after{content:"";position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.5;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  .wrap{max-width:640px;margin:0 auto;padding:1.2rem}
+  .blood{color:var(--blood)}.gold{color:var(--gold)}
+
+  /* INTRO */
+  #intro{min-height:100svh;display:flex;flex-direction:column;justify-content:center;text-align:center;padding:2rem 1.4rem}
+  #intro .kick{letter-spacing:.4em;color:var(--gold);font-size:.72rem;font-weight:700;margin-bottom:1.2rem}
+  #intro h1{font-weight:900;font-size:clamp(2.2rem,9vw,3.6rem);line-height:1.1}
+  #intro p{color:var(--ink-dim);margin:1.6rem auto 0;max-width:26rem}
+  #intro .goal{border:1px solid var(--line);border-radius:14px;padding:1.1rem;margin:1.8rem auto 0;max-width:24rem;background:var(--bg2);text-align:left;font-size:.9rem}
+  #intro .goal b{color:var(--gold)}
+  .btn{margin-top:2rem;display:inline-block;font-weight:800;letter-spacing:.1em;color:#0b0a0d;background:var(--blood);border:none;border-radius:100px;padding:1rem 2.2rem;cursor:pointer;font-size:.95rem;box-shadow:0 8px 26px rgba(255,46,23,.32)}
+  .btn:hover{background:#ff4526;transform:translateY(-2px)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+  .btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+
+  /* GAME */
+  #game{display:none}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem}
+  .topbar .day{font-weight:900;font-size:1.1rem}
+  .topbar .day b{color:var(--gold);font-family:Arial}
+  .topbar .stage{font-size:.82rem;color:var(--ink-dim)}
+  .chart-wrap{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:.7rem}
+  svg.chart{width:100%;height:auto;display:block}
+  .legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.72rem;margin-top:.4rem;color:var(--ink-dim)}
+  .legend i{width:14px;height:3px;border-radius:2px;display:inline-block;margin-right:.3rem;vertical-align:middle}
+  .guidetog{margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--temp);border-radius:100px;padding:.25rem .7rem;font-size:.7rem;font-weight:700;cursor:pointer}
+  .guidetog:hover{border-color:var(--temp)}
+
+  .readout{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:.8rem}
+  .ro{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:.6rem;text-align:center}
+  .ro .l{font-size:.64rem;color:var(--ink-dim)}
+  .ro .v{font-weight:900;font-size:1.15rem;margin-top:.1rem}
+
+  .warn{margin-top:.8rem;border-radius:10px;padding:.7rem .9rem;font-size:.85rem;font-weight:700;display:none}
+  .warn.show{display:block}
+  .warn.danger{background:rgba(255,46,23,.14);border:1px solid var(--blood);color:#ff8a76}
+  .warn.caution{background:rgba(255,157,46,.12);border:1px solid var(--warn);color:var(--warn)}
+
+  .tempctl{margin-top:1rem;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:1rem}
+  .tempctl .row{display:flex;align-items:center;justify-content:center;gap:1.2rem}
+  .tempctl .big{font-weight:900;font-size:2.2rem;font-family:Arial;min-width:5rem;text-align:center}
+  .tempctl .big small{font-size:1rem;color:var(--ink-dim)}
+  .tbtn{width:56px;height:56px;border-radius:50%;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:1.5rem;font-weight:900;cursor:pointer}
+  .tbtn:hover{border-color:var(--blood);color:var(--blood)}
+  .tempctl .hint{text-align:center;font-size:.72rem;color:var(--ink-dim);margin-top:.5rem}
+
+  .forecast{display:flex;gap:.4rem;margin-top:.8rem;overflow-x:auto}
+  .forecast .fc{flex:0 0 auto;min-width:52px;background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:.4rem .3rem;text-align:center;font-size:.66rem;color:var(--ink-dim)}
+  .forecast .fc.today{border-color:var(--temp)}
+  .forecast .fc .ic{font-size:1rem;display:block;margin:.1rem 0}
+  .forecast .fc .off{font-weight:800;font-family:Arial}
+  .forecast .fc .off.cold{color:var(--temp)}.forecast .fc .off.hot{color:var(--blood)}
+  .actions{display:flex;gap:.7rem;margin-top:1rem}
+  .actions .btn{flex:1;margin:0;padding:.9rem;text-align:center}
+
+  /* RESULT */
+  #result{display:none;text-align:center}
+  #result .eyebrow{letter-spacing:.3em;color:var(--gold);font-size:.72rem;font-weight:800;margin-bottom:1rem}
+  #result .grade{font-weight:900;font-size:clamp(2rem,9vw,3rem)}
+  #result .comment{color:var(--ink);font-size:1.05rem;margin-top:1rem;max-width:28rem;margin-left:auto;margin-right:auto;font-weight:600}
+  #result .spec{display:grid;grid-template-columns:repeat(2,1fr);gap:.7rem;margin:1.8rem auto 0;max-width:24rem}
+  #result .spec .s{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:.8rem}
+  #result .spec .s .l{font-size:.66rem;color:var(--ink-dim)}
+  #result .spec .s .v{font-weight:900;font-size:1.2rem;margin-top:.15rem}
+  #result .stars{font-size:1.6rem;margin-top:1.2rem;letter-spacing:.2em}
+  /* 銘柄カード（完成の一本）*/
+  #result .label{max-width:24rem;margin:1.8rem auto 0;background:linear-gradient(180deg,#17131c,#0e0b11);border:1px solid var(--line);border-radius:14px;padding:1.4rem 1.2rem;position:relative;overflow:hidden}
+  #result .label::before{content:"";position:absolute;inset:6px;border:1px solid rgba(242,180,58,.28);border-radius:10px;pointer-events:none}
+  #result .label .cap{font-size:.6rem;letter-spacing:.4em;color:var(--gold);font-weight:800}
+  #result .label .mn{font-weight:900;font-size:clamp(2rem,10vw,2.9rem);letter-spacing:.14em;margin:.4rem 0 .2rem;line-height:1.1;text-shadow:0 2px 18px rgba(0,0,0,.5)}
+  #result .label .cls{font-size:.8rem;color:var(--ink-dim);font-weight:700;letter-spacing:.08em}
+  #result .label .tl{margin-top:1rem;border-top:1px dashed var(--line);padding-top:.9rem;font-size:.72rem;color:var(--ink-dim);line-height:1.9;text-align:left}
+  #result .label .tl b{color:var(--ink);font-weight:800}
+  #result .rbtns{display:flex;flex-wrap:wrap;gap:.7rem;justify-content:center;margin-top:2rem}
+  #result .rbtns .btn{margin:0}
+  #result .rbtns .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+</style>
+</head>
+<body>
+
+<!-- INTRO -->
+<section id="intro">
+  <div class="kick">杜氏の温度管理 ／ RAISE THE MOROMI</div>
+  <div style="display:flex;gap:.55rem;justify-content:center;font-size:.72rem;font-weight:800;letter-spacing:.08em;color:var(--ink-dim);margin-bottom:1.4rem"><span>① 麹</span><span>→</span><span>② 酛</span><span>→</span><span class="blood">③ 醪</span></div>
+  <h1>醪（もろみ）を、<br><span class="blood">育てる</span>。</h1>
+  <p>仕込みは終わった。ここから約25日、タンクの中で<b style="color:var(--ink)">糖化と発酵が同時に進む</b>。あなたの仕事はただ一つ——<b style="color:var(--gold)">毎日の品温を決めること</b>。</p>
+  <div class="goal">
+    🎯 <b>ねらい</b>：発酵をうまく導いて、雑味を出さずアルコールを育て、<b>いいタイミングで搾る</b>。<br>
+    <span style="color:var(--ink-dim);font-size:.82rem">・温度が高い→発酵が進むが暴れやすい<br>・低い→きれいだが止まりやすい<br>・末期は下げて酵母を守る</span>
+  </div>
+  <div id="kojiCard"></div>
+  <div><button class="btn" onclick="startGame()">仕込み open！</button></div>
+</section>
+
+<!-- GAME -->
+<section id="game"><div class="wrap">
+  <div class="topbar">
+    <div class="day">留後 <b id="day">0</b> 日目</div>
+    <div class="stage" id="stage">仕込み直後</div>
+  </div>
+
+  <div class="chart-wrap">
+    <svg class="chart" id="chart" viewBox="0 0 620 300"></svg>
+    <div class="legend">
+      <span><i style="background:var(--baume)"></i>ボーメ度</span>
+      <span><i style="background:var(--alc)"></i>アルコール%</span>
+      <span><i style="background:var(--temp)"></i>品温℃</span>
+      <button id="guideTog" class="guidetog" onclick="toggleGuide()">お手本ライン：ON</button>
+    </div>
+  </div>
+
+  <div class="readout">
+    <div class="ro"><div class="l">ボーメ度（醪の比重）</div><div class="v" id="roB">0.0</div></div>
+    <div class="ro"><div class="l">アルコール</div><div class="v" id="roE">0.0<small>%</small></div></div>
+    <div class="ro"><div class="l">泡の勢い</div><div class="v" id="roC">—</div></div>
+  </div>
+
+  <div class="warn" id="warn"></div>
+
+  <div id="forecast" class="forecast"></div>
+
+  <div class="tempctl">
+    <div class="row">
+      <button class="tbtn" onclick="adjT(-0.5)">▼</button>
+      <div class="big"><span id="temp">9.5</span><small>℃</small></div>
+      <button class="tbtn" onclick="adjT(0.5)">▲</button>
+    </div>
+    <div class="hint" id="tempHint">明日の目標品温を決める（外気で実際の品温はブレる）</div>
+  </div>
+
+  <div class="actions">
+    <button class="btn ghost" onclick="advance(1)">1日 進める →</button>
+    <button class="btn" id="pressBtn" onclick="doPress()" disabled>搾る（上槽）</button>
+  </div>
+</div></section>
+
+<!-- RESULT -->
+<section id="result"><div class="wrap">
+  <div class="eyebrow">できあがった、あなたの一本</div>
+  <div class="grade" id="rgrade"></div>
+  <div class="stars" id="rstars"></div>
+  <div class="comment" id="rcomment"></div>
+  <div class="label" id="rlabel"></div>
+  <div class="spec" id="rspec"></div>
+  <div class="rbtns">
+    <a class="btn" id="rnew" href="koji.html">🌾 新しい米で、もう一本 →</a>
+    <button class="btn ghost" onclick="location.reload()">同じ条件でやり直す</button>
+  </div>
+</div></section>
+
+<script>
+// ===== 醪発酵モデル v1.0（凍結）— 仕様書 MOROMI_MODEL_SPEC.md と一致 =====
+const P={Sr0:80,kdiss:10.0,kferm:11.5,Km:2.2,Emax:23,ye:0.245,kbG:1.00,kbE:0.22,t0:2.5,tau:0.55,qS:5.0,qF:2.05};
+const q=(base,T)=>Math.pow(base,(T-15)/8);
+
+// ===== 工程チェーン：前工程（麹）の糖化力 → 醪の kdiss =====
+// koji.html の finish() が付ける ?toka=..&haze=sou|tsuki を受け取り kdiss に写像。
+// 基準の良い麹(toka≈76)→kdiss=10（凍結の標準値）。無指定なら 10 のまま＝単体プレイは従来通り。
+function tokaToKdiss(toka,style){
+  const REF=76, K0=10, p=0.7;               // REF→kdiss=10 に通す
+  const sm = style==='sou' ? 1.03 : 0.97;   // 総破精=溶けやすく糖化強め／突き破精=軽快
+  const k = K0*Math.pow(Math.max(toka,1)/REF,p)*sm;
+  return Math.max(6.0, Math.min(13.5, +k.toFixed(2)));
+}
+// vigor(酛の元気さ) → 酵母の立ち上がり t0/tau（無指定なら 2.5/0.55＝凍結）
+function vigorToYeast(vigor){
+  const REF=60;
+  const t0=Math.max(1.6,Math.min(4.5, 2.5*Math.pow(REF/Math.max(vigor,1),0.55)));
+  const tau=Math.max(0.40,Math.min(1.1, 0.55*Math.pow(REF/Math.max(vigor,1),0.35)));
+  return {t0:+t0.toFixed(2),tau:+tau.toFixed(2)};
+}
+let kojiInfo=null, motoInfo=null, vinInfo=null;
+// 酛の酸度→末期の酵母頑健さ(decay耐性)、アミノ酸度→発酵力(kferm)。無指定は1.0＝凍結。
+let acidTol=1, aminoVig=1;
+const clampv=(x,a,b)=>Math.max(a,Math.min(b,x));
+// 米（今年の米 or brewで選んだ米）：溶け具合→Sr0（最終アル上限）、タンパク→アミノ酸。無指定はSr0=80＝凍結。
+const VINTAGES=[
+  {n:'穏やかな年',d:1.00,p:0},{n:'やわらかく溶けやすい年',d:1.10,p:0},{n:'硬く溶けにくい年',d:0.90,p:-3},
+  {n:'高タンパクの年',d:0.98,p:12},{n:'小粒だが良質の年',d:1.05,p:-5},
+];
+const RICE={yamada:{n:'山田錦',d:1.02,p:0},gohyaku:{n:'五百万石',d:0.94,p:-4},miyama:{n:'美山錦',d:0.96,p:-3},omachi:{n:'雄町',d:1.12,p:6}};
+const POLISH={daiginjo:{p:-8,l:'精米50%'},ginjo:{p:-2,l:'精米60%'},junmai:{p:6,l:'精米70%'}};
+const YEAST={kaori:{n:'華やか系',base:70},odaya:{n:'穏やか系',base:28}};
+let vinProtein=0, yeastInfo=null;
+(function initChain(){
+  const u=new URLSearchParams(location.search);
+  // --- 米 → Sr0（溶け具合）・タンパク（rice/polish 優先、なければ vin）---
+  if(u.has('rice')){
+    const r=RICE[u.get('rice')]||RICE.yamada; const pol=POLISH[u.get('polish')];
+    P.Sr0=+(80*r.d).toFixed(1); vinProtein=r.p+(pol?pol.p:0);
+    vinInfo={name:r.n+(pol?`・${pol.l}`:''), Sr0:P.Sr0, chosen:true};
+  } else {
+    const vi=parseInt(u.get('vin'));
+    if(isFinite(vi)&&vi>=0&&vi<VINTAGES.length){ const v=VINTAGES[vi];
+      P.Sr0=+(80*v.d).toFixed(1); vinProtein=v.p; vinInfo={name:v.n,Sr0:P.Sr0,chosen:false}; }
+  }
+  // --- 酵母 → 吟醸香のベース ---
+  const y=YEAST[u.get('yeast')]; if(y) yeastInfo={key:u.get('yeast'),name:y.n,base:y.base};
+  // --- 麹 → kdiss ---
+  if(u.has('toka')){
+    let toka=parseFloat(u.get('toka'));
+    if(isFinite(toka)){
+      toka=Math.max(0,Math.min(100,toka));
+      const haze=u.get('haze')==='tsuki'?'tsuki':'sou';
+      P.kdiss=tokaToKdiss(toka,haze);
+      kojiInfo={toka:Math.round(toka),haze,kd:P.kdiss};
+    }
+  }
+  // --- 酛 → t0/tau ---
+  if(u.has('vigor')){
+    let vigor=parseFloat(u.get('vigor'));
+    if(isFinite(vigor)){
+      vigor=Math.max(0,Math.min(100,vigor));
+      const yp=vigorToYeast(vigor);
+      P.t0=yp.t0; P.tau=yp.tau;
+      const mtype=u.get('moto')==='kimoto'?'kimoto':(u.get('moto')==='sokujo'?'sokujo':null);
+      const acid=u.has('acid')?Math.max(0,Math.min(100,parseFloat(u.get('acid')))):null;
+      const amino=u.has('amino')?Math.max(0,Math.min(100,parseFloat(u.get('amino')))):null;
+      const sando=(mtype==='kimoto'?1.3:0.9)+(acid!=null?acid:50)/100*0.6;
+      // 今年の米のタンパクをアミノ酸に上乗せ
+      const aminodo=0.9+clampv((amino!=null?amino:35)+vinProtein,0,100)/100*1.4;
+      // 醪コアへ実接続：酸度→decay耐性(末期頑健)、アミノ酸度→kferm(発酵力)。速醸標準(1.3/1.4)で×1.0。
+      acidTol = 1 + 0.55*clampv(sando-1.3,-0.3,0.7);
+      aminoVig = 1 + 0.40*clampv(aminodo-1.4,-0.4,0.7);
+      motoInfo={vigor:Math.round(vigor),type:mtype,t0:yp.t0,tau:yp.tau,sando:+sando.toFixed(1),aminodo:+aminodo.toFixed(1),acidTol:+acidTol.toFixed(3),aminoVig:+aminoVig.toFixed(3)};
+    }
+  }
+  renderChainCard();
+})();
+function renderChainCard(){
+  const el=document.getElementById('kojiCard'); if(!el) return;
+  if(!kojiInfo && !motoInfo && !vinInfo){ el.innerHTML=''; return; }
+  let html='<div class="goal" style="border-color:var(--gold)">';
+  if(vinInfo){
+    const note=P.Sr0>=84?'溶けやすい米＝最終アル高め。':P.Sr0<=76?'溶けにくい米＝最終アル低め。溶かす温度で補って。':'例年並み。';
+    html+=`🌾 <b>${vinInfo.chosen?'選んだ米':'今年の米'}</b>：<b class="gold">${vinInfo.name}</b> → 糖プール Sr0=${P.Sr0}（標準80）。${note}${(kojiInfo||motoInfo||yeastInfo)?'<br>':''}`;
+  }
+  if(yeastInfo){
+    html+=`✨ <b>酵母</b>：<b class="gold">${yeastInfo.name}</b> → ${yeastInfo.key==='kaori'?'低温で回すほど吟醸香が立つ。':'香り控えめ、食中向け。'}${(kojiInfo||motoInfo)?'<br>':''}`;
+  }
+  if(kojiInfo){
+    const hazeName=kojiInfo.haze==='sou'?'総破精':'突き破精';
+    const note=P.kdiss>=10.5?'糖化強め＝ボーメ高め・濃醇。':P.kdiss<=8?'糖化弱め＝ボーメ上がりにくい。':'標準的な糖化力。';
+    html+=`🌾 <b>麹</b>：糖化力 <b class="gold">${kojiInfo.toka}</b>／${hazeName} → 糖化 <b>kdiss=${P.kdiss}</b>（標準10）。${note}`;
+  }
+  if(motoInfo){
+    const tn=motoInfo.type==='kimoto'?'生酛':motoInfo.type==='sokujo'?'速醸':'酛';
+    const note=P.t0<=2.1?'酵母が元気＝早くきれいに切れる。':P.t0>=3.3?'酵母が弱い＝糖が溜まり暴れやすい。高温注意。':'標準的な立ち上がり。';
+    const aa=acidTol>=1.15?' 酸が高く、末期も酵母が粘る（辛口・ドライ寄り）。':aminoVig>=1.1?' アミノ酸が発酵を後押し。':'';
+    html+=`${kojiInfo?'<br>':''}🍶 <b>${tn}</b>：元気さ <b class="gold">${motoInfo.vigor}</b>（酸度${motoInfo.sando}／アミノ${motoInfo.aminodo}） → 立ち上がり <b>t0=${P.t0}</b>（標準2.5）。${note}${aa}`;
+  }
+  html+='</div>';
+  el.innerHTML=`<div style="font-size:.82rem;color:var(--ink-dim)">${html}</div>`;
+}
+
+// ===== 外的要因：その日の天気（外気が品温を狙いから引っぱる）=====
+// 見える化＝予報で数日先まで提示。プレイヤーは目標品温で補正する。?weather=off で無効（＝凍結検証用）。
+const weatherOn = new URLSearchParams(location.search).get('weather')!=='off';
+let weather=[]; // 日ごとの外気オフセット(℃)
+(function genWeather(){
+  for(let d=0;d<=36;d++) weather[d]=Math.round((Math.random()-0.5)*2)/2*0.5; // ±0.25の微ノイズ
+  if(!weatherOn){ weather=weather.map(()=>0); return; }
+  const nEv=1+Math.floor(Math.random()*2);
+  for(let e=0;e<nEv;e++){
+    const start=4+Math.floor(Math.random()*20), len=2+Math.floor(Math.random()*2);
+    const cold=Math.random()<0.6, mag=(cold?-1:1)*(2+Math.floor(Math.random()*4)*0.5); // ±2〜3.5
+    for(let d=start;d<start+len&&d<=36;d++) weather[d]=Math.round((mag+(Math.random()-0.5)*0.5)*2)/2;
+  }
+})();
+function weatherIcon(o){ return o<=-1.5?'❄':o<=-0.5?'🌥':o>=1.5?'🔥':o>=0.5?'☀':'·'; }
+function renderForecast(){
+  const el=document.getElementById('forecast'); if(!el) return;
+  if(!weatherOn){ el.style.display='none'; return; }
+  const cur=Math.round(t); let s='';
+  for(let d=cur+1; d<=Math.min(cur+5,34); d++){ const o=weather[d]||0;
+    const cls=o<=-0.5?'cold':o>=0.5?'hot':''; const sign=o>0?'+':'';
+    s+=`<div class="fc${d===cur+1?' today':''}"><div>${d}日</div><span class="ic">${weatherIcon(o)}</span><span class="off ${cls}">${o===0?'±0':sign+o}</span></div>`;
+  }
+  el.innerHTML=s;
+}
+
+// ===== ゲーム状態 =====
+let t=0, G=0, E=0, Sr=P.Sr0;     // 連続状態
+let targetT=9.5;                  // プレイヤーの目標品温
+let actualT=9.5;                  // 外気補正後の実品温
+let rec=[{day:0,T:9.5,G:0,E:0,baume:0,co2:0}];
+let maxCo2=0.0001, maxB=0, peakDay=0, dangerDays=0, hotDays=0, atodoke=false;
+let showGuide=true;
+// 理想の品温経過（標準型のお手本）: 9.5℃→+1/日→5日14.5→16.5で頭打ち→末期降温
+const idealT=(d)=>{ if(d<5)return 9.5+d*1.0; if(d<9)return 14.5+(d-5)*0.5; if(d<18)return 16.5; return Math.max(12,16.5-(d-18)*0.6); };
+function toggleGuide(){ showGuide=!showGuide; document.getElementById('guideTog').textContent='お手本ライン：'+(showGuide?'ON':'OFF'); draw(); }
+
+function startGame(){document.getElementById('intro').style.display='none';document.getElementById('game').style.display='block';draw();refresh();}
+
+function adjT(d){ targetT=Math.max(5,Math.min(24,+(targetT+d).toFixed(1))); document.getElementById('temp').textContent=targetT.toFixed(1); }
+
+// 1日分を凍結エンジンで積分（実品温T＝目標＋その日の外気）
+function stepDay(){
+  const dayIdx=Math.round(t)+1;
+  actualT=Math.max(5,Math.min(24, +(targetT+(weather[dayIdx]||0)).toFixed(2)));
+  const dt=0.02, steps=50, T=actualT;
+  for(let i=0;i<steps;i++){
+    t+=dt;
+    const Y=1/(1+Math.exp(-(t-P.t0)/P.tau));
+    const decay=Math.max(0,1-(Math.max(0,E-14)/(9*acidTol))*(Math.max(0,T-13)/8));
+    const Yeff=Y*Math.max(0.15,decay);
+    const rs=P.kdiss*(Sr/P.Sr0)*q(P.qS,T);
+    const rf=(P.kferm*aminoVig)*Yeff*(G/(G+P.Km))*q(P.qF,T)*Math.max(0,1-E/P.Emax);
+    G+=(rs-rf)*dt; if(G<0)G=0;
+    E+=(P.ye*rf)*dt; if(E>P.Emax)E=P.Emax;
+    Sr-=rs*dt; if(Sr<0)Sr=0;
+  }
+  const T2=actualT;
+  const rfNow=(P.kferm*aminoVig)*(1/(1+Math.exp(-(t-P.t0)/P.tau)))*(G/(G+P.Km))*q(P.qF,T2)*Math.max(0,1-E/P.Emax);
+  const baume=P.kbG*G-P.kbE*E;
+  const day=Math.round(t);
+  rec.push({day,T:T2,G,E,baume,co2:rfNow});
+  maxCo2=Math.max(maxCo2,rfNow);
+  if(baume>maxB){maxB=baume;peakDay=day;}
+  if(T2>=20)hotDays++;
+  // あとどけ判定：ピーク後に日本酒度が逆に上昇（ボーメ微増）
+  if(day>peakDay+2 && rec.length>2 && baume>rec[rec.length-2].baume+0.05 && day>12) atodoke=true;
+}
+
+function advance(n){
+  for(let k=0;k<n;k++){ if(t>=34)break; stepDay(); }
+  draw(); refresh();
+}
+
+function refresh(){
+  const r=rec[rec.length-1], day=Math.round(t);
+  document.getElementById('day').textContent=day;
+  document.getElementById('roB').textContent='ボーメ '+r.baume.toFixed(1);
+  document.getElementById('roE').innerHTML=r.E.toFixed(1)+'<small>%</small>';
+  const ci=r.co2/maxCo2;
+  document.getElementById('roC').textContent = ci>0.9?'🔥最盛':ci>0.55?'盛ん':ci>0.25?'中':ci>0.08?'弱':'静か';
+  const [nm]=stage(day,r); document.getElementById('stage').textContent=nm;
+  // press button：10日目以降で有効
+  document.getElementById('pressBtn').disabled = day<10;
+  // 天気：予報と、直前に効いた外気
+  renderForecast();
+  const h=document.getElementById('tempHint');
+  if(weatherOn && h){
+    const nx=weather[day+1]||0;
+    const fc = day>=34?'' : (nx===0?' 明日の外気は穏やか。':` 明日は ${weatherIcon(nx)} 外気${nx>0?'+':''}${nx}℃ の予報→目標で補正を。`);
+    const last = (r.T!==undefined && Math.abs(r.T-targetT)>0.2)?`（実品温は外気で ${r.T.toFixed(1)}℃ になった）`:'';
+    h.innerHTML=`明日の目標品温を決める。${fc}${last}`;
+  }
+  // 警告
+  checkWarn(day,r);
+  // 発酵ほぼ停止 or 35日で自動的に搾りを促す
+  if(day>=34){ document.getElementById('pressBtn').disabled=false; }
+}
+
+function checkWarn(day,r){
+  const w=document.getElementById('warn'); let msg='',cls='';
+  const last3=rec.slice(-4);
+  const stall = day>peakDay+2 && last3.length>=4 && last3.every((x,i)=>i===0||(last3[i-1].baume-x.baume)<0.12) && r.G>3;
+  if(atodoke){ msg='⚠ あとどけ＝発酵が止まったサイン。早めに搾ろう。';cls='danger';}
+  else if(r.T>=20||maxB>11){ msg='🔥 発酵が暴れ気味。雑味・腐造のリスク。品温を下げよう。';cls='danger'; dangerDays++;}
+  else if(r.E>18&&r.T>16){ msg='⚠ 高アルコールなのに高温。酵母が弱る。品温を下げて守ろう。';cls='caution'; dangerDays++;}
+  else if(stall){ msg='⚠ 醪が動いていない。品温を上げて発酵を促そう。';cls='caution'; dangerDays++;}
+  else if(day>=22&&r.co2<maxCo2*0.12){ msg='✅ 発酵が落ち着いた。そろそろ搾りどき。';cls='caution';}
+  if(msg){w.textContent=msg;w.className='warn show '+cls;} else {w.className='warn';}
+}
+
+function stage(day,r){
+  const c=r.co2;
+  if(day<2)return['仕込み直後'];
+  if(day<=3)return['筋泡（発酵開始）'];
+  if(day<=4)return['水泡・カニ泡'];
+  if(c>=maxCo2*0.9)return['高泡（発酵最盛）'];
+  if(r.E<13&&c>maxCo2*0.6)return['岩泡'];
+  if(r.E>=12&&c>maxCo2*0.35)return['落泡'];
+  if(c>maxCo2*0.12)return['玉泡'];
+  return['地（泡消え）'];
+}
+
+// ===== チャート =====
+function draw(){
+  const svg=document.getElementById('chart');
+  const W=620,H=300,pad={l:38,r:38,t:16,b:26}, XMAX=32;
+  const x=d=>pad.l+(d/XMAX)*(W-pad.l-pad.r);
+  const yB=v=>H-pad.b-((v-(-6))/(10-(-6)))*(H-pad.t-pad.b);
+  const yE=v=>H-pad.b-((v-0)/(21-0))*(H-pad.t-pad.b);
+  const yT=v=>H-pad.b-((v-5)/(22-5))*(H-pad.t-pad.b);
+  let s='';
+  for(let d=0;d<=30;d+=5){s+=`<line x1="${x(d)}" y1="${pad.t}" x2="${x(d)}" y2="${H-pad.b}" stroke="rgba(255,255,255,.05)"/><text x="${x(d)}" y="${H-pad.b+16}" fill="#a8a091" font-size="9" text-anchor="middle">${d}</text>`;}
+  s+=`<line x1="${pad.l}" y1="${yB(0)}" x2="${W-pad.r}" y2="${yB(0)}" stroke="rgba(242,180,58,.22)" stroke-dasharray="4 3"/>`;
+  // お手本の品温ライン（理想カーブ・全期間）
+  if(showGuide){
+    let gp='';
+    for(let d=0;d<=30;d++){ gp+=(d?'L':'M')+x(d).toFixed(1)+' '+yT(idealT(d)).toFixed(1)+' '; }
+    s+=`<path d="${gp}" fill="none" stroke="var(--temp)" stroke-width="1.5" stroke-dasharray="3 4" opacity=".35"/>`;
+    s+=`<text x="${x(21)}" y="${yT(idealT(21))-6}" fill="var(--temp)" font-size="8" opacity=".55">お手本の品温</text>`;
+  }
+  const P2=(sel,fn)=>rec.map((r,i)=>(i?'L':'M')+x(r.day).toFixed(1)+' '+fn(r[sel]).toFixed(1)).join(' ');
+  s+=`<path d="${P2('T',yT)}" fill="none" stroke="var(--temp)" stroke-width="2" opacity=".85"/>`;
+  s+=`<path d="${P2('baume',yB)}" fill="none" stroke="var(--baume)" stroke-width="2.5"/>`;
+  s+=`<path d="${P2('E',yE)}" fill="none" stroke="var(--alc)" stroke-width="2.5"/>`;
+  // 今日マーカー
+  const last=rec[rec.length-1];
+  s+=`<circle cx="${x(last.day)}" cy="${yB(last.baume)}" r="3.5" fill="var(--baume)"/>`;
+  s+=`<circle cx="${x(last.day)}" cy="${yE(last.E)}" r="3.5" fill="var(--alc)"/>`;
+  svg.innerHTML=s;
+}
+
+// ===== 銘柄名の生成（酒質から・決定論）=====
+function brandName(bucket, seed){
+  const POOLS={
+    rich:['山霧','黒縄','土蔵','鬼灯','熊野路'],
+    dry :['白刃','氷点','一文字','凛','北斗'],
+    kaori:['花明り','香雪','春霞','雅','朝顔'],
+    bal :['月の輪','水鏡','和円','里の詩','初雪'],
+  };
+  const a=POOLS[bucket]||POOLS.bal; return a[Math.abs(Math.round(seed))%a.length];
+}
+
+// ===== 搾り→結果 =====
+function doPress(){
+  const r=rec[rec.length-1], day=Math.round(t);
+  const E=r.E, baume=r.baume;
+  // 完成酒の日本酒度は上槽時の残糖(G)から現実的な帯に算出（醪のボーメとは別物）
+  const nihon=Math.max(-30,Math.min(16,Math.round(8 - r.G*3.4)));
+  // 甘辛の“感じ方”は日本酒度＋酸度（高酸=辛口寄り）−アミノ酸度（コク＝丸み）
+  const sando=motoInfo?motoInfo.sando:1.3, aminodo=motoInfo?motoInfo.aminodo:1.4;
+  const tasteScore = nihon + 5*clampv(sando-1.3,-0.3,0.7) - 3*clampv(aminodo-1.4,-0.4,0.7);
+  const taste = tasteScore>=5?'辛口':(tasteScore<=-4?'甘口':'中口');
+  // 吟醸香（酵母 × 発酵温度 × 精米）：華やか酵母を低温で回すほど香りが立つ
+  let aroma=null;
+  if(yeastInfo){
+    const temps=rec.slice(1).map(x=>x.T); const avgT=temps.reduce((a,b)=>a+b,0)/Math.max(1,temps.length); const mxT=Math.max(...temps,0);
+    const pol=new URLSearchParams(location.search).get('polish');
+    let av=yeastInfo.base + (15.5-avgT)*3.2 - Math.max(0,mxT-18)*4 + (pol==='daiginjo'?12:pol==='ginjo'?4:pol==='junmai'?-8:0);
+    aroma=Math.round(Math.max(0,Math.min(100,av)));
+  }
+  const kaoriType = aroma!=null && aroma>=64;
+  // タイプ判定（生酛の酸・アミノで複雑さ、酵母×低温で吟醸香）
+  const rich = motoInfo && (sando>=1.55 || aminodo>=1.55);
+  let type = maxB>11?'濃醇（やや荒い）':(kaoriType?'華やか吟醸系':(rich?'生酛らしい複雑・コク':(maxB<6.5&&Math.max(...rec.map(x=>x.T))<13?'華やか吟醸系':'バランス型')));
+  const kire = sando>=1.5?'キレのある':''; const koku = aminodo>=1.5?'コクのある':'';
+  // 評価
+  let stars=3, grade='', comment='';
+  const cleanFerment = maxB>=6 && maxB<=9 && hotDays<=2;
+  const goodAlc = E>=17.5 && E<=20;
+  const goodTiming = day>=22 && day<=30 && r.co2<maxCo2*0.2;
+  if(atodoke){ grade='しくじり杜氏…'; stars=2; comment='発酵が止まったまま置いてしまった。次はあとどけのサインを見逃さずに。'; }
+  else if(cleanFerment && goodAlc && goodTiming && dangerDays===0){ grade='名杜氏！'; stars=5; comment='狙いどおりのキレイな発酵。雑味なく、いい度数で、絶好のタイミングで搾れた。会心の一本。'; }
+  else if(maxB>11||hotDays>=3){ grade='攻めの杜氏'; stars=3; comment='高温で攻めた結果、力強いが雑味も乗った濃い酒に。好みは分かれる、個性派の一本。'; }
+  else if(E<15){ grade='慎重すぎ？'; stars=2; comment='低温・早搾りで発酵が伸び悩み、軽くやさしい酒に。もう少し攻めても良かったかも。'; }
+  else if(goodAlc && dangerDays<=1){ grade='good杜氏'; stars=4; comment='大きな破綻なく、バランスの取れた飲みやすい酒に仕上がった。'; }
+  else{ grade='そこそこ杜氏'; stars=3; comment='ひとまず酒にはなった。温度の山と搾りどきを意識すると、もう一段よくなる。'; }
+  if(kojiInfo||motoInfo){
+    const parts=[];
+    if(kojiInfo) parts.push(`糖化力${kojiInfo.toka}の${kojiInfo.haze==='sou'?'総破精':'突き破精'}麹`);
+    if(motoInfo) parts.push(`${motoInfo.type==='kimoto'?'生酛':'速醸'}(元気さ${motoInfo.vigor})`);
+    comment += ` ${parts.join('と')}から仕込んだ、あなたの一貫造り。`;
+    const kk=[koku,kire].filter(Boolean).join('');
+    if(kk) comment += ` ${kk}酒質。`;
+    if(motoInfo && acidTol>=1.15 && hotDays>=2) comment += ' 末期に温度が高めでも、酛の酸が酵母を守り発酵を最後まで押し切った。';
+  }
+  document.getElementById('game').style.display='none';
+  const R=document.getElementById('result'); R.style.display='block';
+  document.getElementById('rgrade').textContent=grade;
+  document.getElementById('rstars').textContent='★★★★★☆☆☆☆☆'.slice(5-stars,10-stars);
+  document.getElementById('rcomment').textContent=comment;
+  document.getElementById('rspec').innerHTML=
+    `<div class="s"><div class="l">アルコール（原酒）</div><div class="v">${E.toFixed(1)}%</div></div>`+
+    `<div class="s"><div class="l">日本酒度</div><div class="v">${nihon>0?'+':''}${nihon}</div></div>`+
+    `<div class="s"><div class="l">甘辛</div><div class="v">${taste}</div></div>`+
+    `<div class="s"><div class="l">タイプ</div><div class="v" style="font-size:.95rem">${type}</div></div>`+
+    `<div class="s"><div class="l">最高ボーメ</div><div class="v">${maxB.toFixed(1)}</div></div>`+
+    `<div class="s"><div class="l">搾った日</div><div class="v">${day}日目</div></div>`+
+    (motoInfo?`<div class="s"><div class="l">酸度（${motoInfo.type==='kimoto'?'生酛':'速醸'}）</div><div class="v">${motoInfo.sando}</div></div>`+
+             `<div class="s"><div class="l">アミノ酸度</div><div class="v">${motoInfo.aminodo}</div></div>`:'')+
+    (aroma!=null?`<div class="s"><div class="l">吟醸香（${yeastInfo.name}）</div><div class="v">${aroma>=64?'華やか':aroma>=40?'ほどよい':'穏やか'}</div></div>`:'');
+
+  // ===== 銘柄カード（一貫造りの締めくくり）=====
+  const bucket = /濃醇|複雑・コク/.test(type) ? 'rich' : (type==='華やか吟醸系' ? 'kaori' : (taste==='辛口' ? 'dry' : 'bal'));
+  const seed = E*10 + nihon*3 + maxB*7 + (vinInfo?vinInfo.Sr0:0) + (motoInfo?motoInfo.vigor:0) + (aroma||0);
+  const name = brandName(bucket, seed);
+  const desc=[koku,kire].filter(Boolean).map(x=>x.replace('のある','')).join('・');
+  const cls = (motoInfo&&motoInfo.type==='kimoto'?'生酛 ':'') + '純米' + (E>=18?'原酒':'酒') + ' ／ ' + taste + (desc?`・${desc}`:'');
+  const tl=[];
+  if(vinInfo) tl.push(`🌾 <b>${vinInfo.name}</b>`);
+  if(kojiInfo) tl.push(`🦠 麹 糖化力<b>${kojiInfo.toka}</b>・${kojiInfo.haze==='sou'?'総破精':'突き破精'}`);
+  if(motoInfo) tl.push(`🍶 ${motoInfo.type==='kimoto'?'生酛':'速醸'} 元気さ<b>${motoInfo.vigor}</b>`);
+  if(yeastInfo) tl.push(`✨ 酵母 ${yeastInfo.name}・吟醸香<b>${aroma>=64?'華やか':aroma>=40?'ほどよい':'穏やか'}</b>`);
+  tl.push(`🍶 醪 <b>${E.toFixed(1)}%</b>・日本酒度<b>${nihon>0?'+':''}${nihon}</b>${motoInfo?`・酸度<b>${motoInfo.sando}</b>`:''}`);
+  document.getElementById('rlabel').innerHTML =
+    `<div class="cap">銘 柄</div><div class="mn">${name}</div><div class="cls">${cls}</div>`+
+    `<div class="tl">${tl.join(' <span style="color:var(--gold)">→</span><br>')}</div>`;
+  // 「新しい米で、もう一本」は毎回まっさらな仕込み（＝新しい今年の米）
+  const rnew=document.getElementById('rnew'); if(rnew) rnew.setAttribute('href','koji.html');
+}
+</script>
+</body>
+</html>

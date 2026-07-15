@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>米→酒｜お米が日本酒になる仕組み</title>
+<meta name="description" content="お米はなぜ酒になるのか。麹と酵母のリレーと5つの工程で、いちばんシンプルに。">
+<style>
+  :root{
+    --bg:#0b0a0d;--bg2:#141118;--ink:#f6f1e6;--ink-dim:#a8a091;
+    --blood:#ff2e17;--gold:#f2b43a;--foam:#fff7e6;--line:rgba(246,241,230,.14);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+    background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;overflow-x:hidden;font-weight:500}
+  body::after{content:"";position:fixed;inset:0;z-index:60;pointer-events:none;opacity:.5;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+  #progress{position:fixed;top:0;left:0;height:4px;width:0;z-index:100;background:var(--blood);box-shadow:0 0 14px var(--blood);transition:width .08s linear}
+  .blood{color:var(--blood)}.gold{color:var(--gold)}
+
+  /* HERO */
+  .hero{position:relative;min-height:100svh;overflow:hidden;display:flex;align-items:center;justify-content:center;padding:1.5rem}
+  #foam{position:absolute;inset:0;z-index:0}
+  .hero .vignette{position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(120% 90% at 50% 40%,transparent 40%,rgba(0,0,0,.75) 100%)}
+  .hero-inner{position:relative;z-index:2;text-align:center;width:100%;max-width:1000px}
+  .kicker{font-size:clamp(.6rem,1.5vw,.8rem);letter-spacing:.5em;color:var(--gold);margin-bottom:1.4rem;font-weight:700;padding-left:.5em}
+  .hero h1{font-weight:900;line-height:.86;letter-spacing:-.02em;font-size:clamp(4.2rem,20vw,15rem);text-shadow:0 6px 60px rgba(0,0,0,.6)}
+  .hero h1 .stroke{color:transparent;-webkit-text-stroke:2px var(--ink)}
+  .hero h1 .arrow{display:inline-block;color:var(--blood);transform:translateY(-.06em);font-size:.7em;-webkit-text-stroke:0;margin:0 .06em;animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  .hero p.lead{margin:2rem auto 0;max-width:26rem;color:var(--ink-dim);font-size:clamp(.95rem,2.4vw,1.1rem);line-height:2;font-weight:500}
+  .hero p.lead b{color:var(--ink);font-weight:800}
+  .enter{margin-top:2.4rem;display:inline-flex;align-items:center;gap:.7rem;font-weight:700;letter-spacing:.2em;font-size:.8rem;color:var(--ink);
+    border:1px solid var(--line);border-radius:100px;padding:.85rem 1.6rem;text-decoration:none;transition:.3s;background:rgba(255,255,255,.02)}
+  .enter:hover{background:var(--blood);border-color:var(--blood);color:#fff;transform:translateY(-2px)}
+  .enter .dot{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold)}
+
+  /* SHELL */
+  section.blk{padding:clamp(4rem,10vw,7rem) clamp(1.3rem,5vw,4rem);position:relative}
+  .max{max-width:960px;margin:0 auto}
+  .ey{display:inline-flex;align-items:center;gap:.6rem;font-weight:800;letter-spacing:.3em;font-size:.72rem;color:var(--gold);margin-bottom:1.3rem}
+  .ey::before{content:"";width:26px;height:2px;background:var(--blood)}
+  h2.big{font-weight:900;line-height:1.15;letter-spacing:-.01em;font-size:clamp(1.9rem,6vw,3.4rem)}
+  .lead2{color:var(--ink-dim);font-size:clamp(1rem,2.4vw,1.13rem);line-height:2.05;margin-top:1.4rem;max-width:40rem}
+  .lead2 b{color:var(--ink);font-weight:800;background:linear-gradient(transparent 62%,rgba(255,46,23,.45) 62%)}
+  .lead2 .g{color:var(--gold);font-weight:800;background:none}
+
+  /* RELAY */
+  .core{border-top:1px solid var(--line);background:radial-gradient(80% 55% at 50% 0%,rgba(255,46,23,.08),transparent 60%),var(--bg)}
+  .relay{margin:2.6rem 0 0;border:1px solid var(--line);border-radius:22px;padding:2rem 1.6rem;background:rgba(0,0,0,.28)}
+  .relay .chain{display:flex;align-items:stretch;gap:.5rem;flex-wrap:wrap}
+  .node{flex:1 1 150px;min-width:135px;border:1px solid var(--line);border-radius:16px;padding:1.2rem 1rem;text-align:center;background:var(--bg)}
+  .node .em{font-size:1.9rem;display:block}
+  .node .nm{display:block;font-weight:900;font-size:1.15rem;margin-top:.4rem}
+  .node .sub{display:block;color:var(--ink-dim);font-size:.74rem;margin-top:.35rem;font-weight:600;line-height:1.5}
+  .node.rice{border-color:rgba(242,180,58,.4)}.node.sugar{border-color:rgba(242,180,58,.55)}
+  .node.sake{border-color:var(--blood);box-shadow:0 0 30px rgba(255,46,23,.18)}
+  .conv{flex:0 0 112px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.35rem}
+  .conv .who{font-weight:900;font-size:.9rem;color:var(--ink)}
+  .conv .act{font-weight:700;font-size:.68rem;color:var(--gold)}
+  .conv .ar{color:var(--blood);font-size:1.5rem;line-height:1;font-weight:900}
+  .relay .simul{margin-top:1.4rem;border-top:1px dashed var(--line);padding-top:1.2rem;display:flex;gap:.8rem;align-items:flex-start}
+  .relay .simul .badge{flex:0 0 auto;background:var(--blood);color:#fff;font-weight:900;font-size:.72rem;letter-spacing:.08em;padding:.4rem .8rem;border-radius:100px;white-space:nowrap}
+  .relay .simul p{color:var(--ink);font-size:.96rem;line-height:1.85;font-weight:600}
+  .relay .simul p b{color:var(--gold)}
+
+  /* INGREDIENTS strip */
+  .ings{display:grid;grid-template-columns:repeat(4,1fr);gap:.8rem;margin-top:2.6rem}
+  .ing{border:1px solid var(--line);border-radius:16px;padding:1.3rem 1rem;text-align:center;background:rgba(0,0,0,.2);transition:.3s}
+  .ing:hover{border-color:var(--blood);transform:translateY(-3px)}
+  .ing .emo{font-size:2rem;display:block}
+  .ing h3{font-weight:900;font-size:1.35rem;margin-top:.4rem}
+  .ing .job{color:var(--gold);font-weight:800;font-size:.76rem;margin-top:.5rem;line-height:1.4}
+
+  /* STEPS */
+  .steps{margin-top:2.4rem}
+  .step{border-top:1px solid var(--line);padding:1.6rem 0;display:grid;grid-template-columns:auto 1fr;gap:.3rem 1.6rem;align-items:baseline}
+  .step:last-child{border-bottom:1px solid var(--line)}
+  .step .no{font-family:Arial,sans-serif;font-weight:900;font-size:clamp(1.9rem,6vw,3rem);line-height:.9;color:transparent;-webkit-text-stroke:1.5px var(--ink-dim);grid-row:span 2}
+  .step:hover .no{-webkit-text-stroke:1.5px var(--blood)}
+  .step h3{font-weight:900;font-size:clamp(1.15rem,3.5vw,1.5rem)}
+  .step h3 small{font-weight:700;font-size:.6em;color:var(--gold);margin-left:.6rem}
+  .step .sum{color:var(--ink-dim);font-size:.98rem;line-height:1.85;font-weight:500}
+  .step .sum b{color:var(--ink);font-weight:800}
+
+  /* closing */
+  .close{text-align:center;position:relative;overflow:hidden;background:radial-gradient(90% 70% at 50% 120%,rgba(255,46,23,.18),transparent 60%),var(--bg2)}
+  .recap{max-width:640px;margin:0 auto 2.4rem;border:1px solid var(--line);border-radius:20px;padding:1.7rem;background:rgba(0,0,0,.25);text-align:left}
+  .recap h3{font-weight:900;font-size:.95rem;color:var(--gold);letter-spacing:.1em;margin-bottom:.9rem;text-align:center}
+  .recap ol{list-style:none;counter-reset:r}
+  .recap li{counter-increment:r;position:relative;padding:.5rem 0 .5rem 2.4rem;border-bottom:1px dashed var(--line);font-size:.98rem;line-height:1.7}
+  .recap li:last-child{border-bottom:none}
+  .recap li::before{content:counter(r);position:absolute;left:0;top:.45rem;width:1.6rem;height:1.6rem;border-radius:50%;background:var(--blood);color:#fff;font-weight:900;font-size:.8rem;display:flex;align-items:center;justify-content:center;font-family:Arial}
+  .recap li b{color:var(--ink);font-weight:800}
+  .close .huge{font-weight:900;line-height:.9;letter-spacing:-.02em;font-size:clamp(3rem,15vw,8rem);color:transparent;-webkit-text-stroke:2px var(--ink)}
+  .close .huge .fill{-webkit-text-stroke:0;color:var(--blood)}
+
+  footer{padding:2.4rem 1.4rem;text-align:center;border-top:1px solid var(--line)}
+  footer .f1{font-weight:900;font-size:1.05rem;letter-spacing:.1em}
+  footer .f2{color:var(--ink-dim);font-size:.7rem;margin-top:.6rem;font-weight:500;line-height:1.7}
+
+  .reveal{opacity:0;transform:translateY(30px);transition:opacity .8s,transform .8s}
+  .reveal.in{opacity:1;transform:none}
+
+  @media(max-width:680px){
+    .ings{grid-template-columns:repeat(2,1fr)}
+    .relay .chain{flex-direction:column}
+    .conv{flex-basis:auto;flex-direction:row;gap:.6rem}.conv .ar{transform:rotate(90deg)}
+    .step{grid-template-columns:1fr;gap:.4rem}.step .no{grid-row:auto}
+  }
+  .brewcta{margin-top:2.6rem;text-align:center}
+  .playbtn{display:inline-block;font-weight:900;letter-spacing:.08em;color:#0b0a0d;background:var(--blood);border-radius:100px;padding:1.1rem 2.4rem;font-size:1.02rem;box-shadow:0 10px 30px rgba(255,46,23,.34);text-decoration:none}
+  .playbtn:hover{background:#ff4526;transform:translateY(-2px)}
+  .brewsub{color:var(--ink-dim);font-size:.84rem;margin-top:1rem;line-height:1.7}
+  .try{display:inline-block;margin-top:.7rem;font-size:.8rem;font-weight:800;color:var(--gold);text-decoration:none;letter-spacing:.04em;border:1px solid rgba(242,180,58,.4);border-radius:100px;padding:.35rem .9rem}
+  .try:hover{background:rgba(242,180,58,.1)}
+  /* HERO 2CTA */
+  .hero-ctas{display:flex;gap:.9rem;align-items:center;justify-content:center;flex-wrap:wrap;margin-top:2.4rem}
+  .hero-ctas .enter{margin:0}
+  /* JOURNEY roadmap（体験の全体像）*/
+  .journey .lead2{margin-bottom:0}
+  .roadmap{display:flex;align-items:stretch;gap:.45rem;flex-wrap:wrap;margin-top:2.2rem;justify-content:center}
+  .rstage{flex:1 1 148px;min-width:138px;max-width:210px;background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:1.1rem .85rem;color:var(--ink);display:flex;flex-direction:column;gap:.28rem}
+  .rstage.opt{border-style:dashed}
+  .rstage.goal{border-color:rgba(242,180,58,.5);background:linear-gradient(180deg,#17131c,#0e0b11)}
+  .rstage .rn{font-size:.64rem;font-weight:800;letter-spacing:.12em;color:var(--gold)}
+  .rstage .re{font-size:1.7rem;line-height:1}
+  .rstage .rt{font-weight:900;font-size:1rem}
+  .rstage .rd{font-size:.73rem;color:var(--ink-dim);line-height:1.55}
+  .rarrow{align-self:center;color:var(--blood);font-weight:900;flex:0 0 auto;font-size:1.1rem}
+  .rnote{margin-top:1.6rem;font-size:.82rem;color:var(--ink-dim);text-align:center;line-height:1.8;border-top:1px dashed var(--line);padding-top:1.2rem}
+  /* 俯瞰図からの2分岐（醸す／学ぶ）*/
+  .fork{display:flex;gap:1rem;flex-wrap:wrap;margin-top:2.4rem}
+  .forkcard{flex:1 1 280px;text-decoration:none;border-radius:16px;padding:1.5rem 1.4rem;display:flex;flex-direction:column;gap:.4rem;border:1px solid var(--line);transition:transform .15s,border-color .15s}
+  .forkcard:hover{transform:translateY(-3px)}
+  .forkcard.do{background:linear-gradient(180deg,rgba(255,46,23,.15),rgba(255,46,23,.03));border-color:rgba(255,46,23,.5)}
+  .forkcard.do:hover{border-color:var(--blood)}
+  .forkcard.learn:hover{border-color:var(--gold)}
+  .forkcard .fk{font-weight:900;font-size:1.2rem}
+  .forkcard.do .fk{color:#ff6a4d}.forkcard.learn .fk{color:var(--gold)}
+  .forkcard .ft{font-weight:800;font-size:.92rem;color:var(--ink);margin-top:.1rem}
+  .forkcard .fd{font-size:.79rem;color:var(--ink-dim);line-height:1.6}
+  @media(max-width:640px){ .roadmap{flex-direction:column;align-items:stretch} .rstage{max-width:none} .rarrow{transform:rotate(90deg);margin:.1rem 0} }
+</style>
+</head>
+<body>
+<div id="progress"></div>
+
+<!-- HERO -->
+<header class="hero">
+  <canvas id="foam"></canvas>
+  <div class="vignette"></div>
+  <div class="hero-inner">
+    <div class="kicker">お米が日本酒になる仕組み ／ HOW SAKE IS MADE</div>
+    <h1><span class="stroke">米</span><span class="arrow">→</span><span class="blood">酒</span></h1>
+    <p class="lead">甘くないお米が、なぜお酒になるのか。<br><b>杜氏になって、一本を醸す体験。</b></p>
+    <div class="hero-ctas">
+      <a href="#journey" class="enter"><span class="dot"></span>全体を見てみる</a>
+    </div>
+  </div>
+</header>
+
+<!-- JOURNEY OVERVIEW（体験の全体像）-->
+<section class="blk journey" id="journey">
+  <div class="max reveal">
+    <div class="ey">これから、何をする</div>
+    <h2 class="big">米一粒から、<span class="gold">一本の酒</span>まで。</h2>
+    <p class="lead2">あなたは<b>杜氏（とうじ）</b>。武器は<b>温度管理ひとつ</b>。麹・酛・醪を順に導き、あなたの一本を仕込みます。全体はこの流れ——<b>前の工程の出来が、次へ受け継がれます</b>。</p>
+    <p class="lead2" style="margin-top:.6rem">この地図が、体験のぜんぶ。<b style="color:var(--ink)">造ってみる</b>も、<b style="color:var(--ink)">まず仕組みを学ぶ</b>も、下から選べます。</p>
+    <div class="roadmap">
+      <div class="rstage"><span class="rn">はじめに</span><span class="re">📋</span><span class="rt">配合を決める</span><span class="rd">米・精米・酵母を選び、造りの方向を決める</span></div>
+      <span class="rarrow">→</span>
+      <div class="rstage"><span class="rn">① 麹</span><span class="re">🦠</span><span class="rt">麹をつくる</span><span class="rd">焼かずに育て、糖化力を宿す（約2日）</span></div>
+      <span class="rarrow">→</span>
+      <div class="rstage"><span class="rn">② 酛</span><span class="re">🍶</span><span class="rt">酛を建てる</span><span class="rd">酵母を雑菌から守り、元気に増やす（速醸2週／生酛1か月）</span></div>
+      <span class="rarrow">→</span>
+      <div class="rstage"><span class="rn">③ 醪</span><span class="re">🫧</span><span class="rt">醪を育てる</span><span class="rd">発酵を導き、搾りどきを見極める（約1か月）</span></div>
+      <span class="rarrow">→</span>
+      <div class="rstage goal"><span class="rn">完成</span><span class="re">🏆</span><span class="rt">あなたの一本</span><span class="rd">銘柄・度数・甘辛が決まり、記録が残る</span></div>
+    </div>
+    <div class="rnote">🌾 道中には <b>「今年の米」</b> や <b>「その日の天気」</b>——読んで対応する外的要因も待っています。</div>
+    <div class="fork">
+      <a href="brew.html" class="forkcard do">
+        <span class="fk">🍶 醸してみる →</span>
+        <span class="ft">杜氏になって、造る</span>
+        <span class="fd">配合設計から始めて、麹 → 酛 → 醪。温度管理ひとつで、あなたの一本まで。</span>
+      </a>
+      <a href="#core" class="forkcard learn">
+        <span class="fk">📖 仕組みを学ぶ →</span>
+        <span class="ft">まず、じっくり読む</span>
+        <span class="fd">お米がなぜ酒になるのか。並行複発酵から5工程まで、いちばんシンプルに。</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- CORE -->
+<section class="blk core" id="core">
+  <div class="max reveal">
+    <div class="ey">いちばん大事なこと</div>
+    <h2 class="big">麹が<span class="gold">糖を作り</span>、<br>酵母が<span class="blood">酒に変える</span>。</h2>
+    <p class="lead2">お酒とは、<b>酵母（こうぼ）が糖を食べてアルコールに変えたもの</b>。ワインはブドウが甘いのでそれだけで済みます。でもお米は甘くない。そこで<b>麹（こうじ）がお米のデンプンを糖に変え</b>、その糖を酵母がお酒にする。この2人のリレーが、日本酒の正体です。</p>
+
+    <div class="relay">
+      <div class="chain">
+        <div class="node rice"><span class="em">🌾</span><span class="nm">デンプン</span><span class="sub">お米の中身</span></div>
+        <div class="conv"><span class="ar">→</span><span class="who">🦠 麹</span><span class="act">① 糖化</span></div>
+        <div class="node sugar"><span class="em">🍬</span><span class="nm">糖</span><span class="sub">甘い成分</span></div>
+        <div class="conv"><span class="ar">→</span><span class="who">✨ 酵母</span><span class="act">② 発酵</span></div>
+        <div class="node sake"><span class="em">🍶</span><span class="nm">日本酒</span><span class="sub">アルコール＋香り</span></div>
+      </div>
+      <div class="simul">
+        <span class="badge">核心</span>
+        <p>この<b>①と②を同じタンクで“同時に”進める</b>のが日本酒だけの技。<b>並行複発酵（へいこうふくはっこう）</b>と呼びます。これだけ覚えれば十分です。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- INGREDIENTS -->
+<section class="blk">
+  <div class="max reveal">
+    <div class="ey">材料は4つだけ</div>
+    <h2 class="big">主役は、<span class="blood">たった4人</span>。</h2>
+    <div class="ings">
+      <div class="ing"><span class="emo">🌾</span><h3>米</h3><div class="job">お酒のもと</div></div>
+      <div class="ing"><span class="emo">💧</span><h3>水</h3><div class="job">味の土台<br>（約8割）</div></div>
+      <div class="ing"><span class="emo">🦠</span><h3>麹</h3><div class="job">糖を作る<br>①糖化</div></div>
+      <div class="ing"><span class="emo">✨</span><h3>酵母</h3><div class="job">酒に変える<br>②発酵</div></div>
+    </div>
+    <p class="lead2">たったこれだけ。<span class="g">米・水・麹・酵母</span>で、日本酒は生まれます。</p>
+  </div>
+</section>
+
+<!-- STEPS -->
+<section class="blk core">
+  <div class="max reveal">
+    <div class="ey">造り方は5工程</div>
+    <h2 class="big">米が酒になる、<br><span class="gold">5つの道のり</span>。</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="no">01</div>
+        <h3>原料処理<small>お米の下ごしらえ</small></h3>
+        <p class="sum">お米を<b>削って・洗って・蒸す</b>。麹や酵母が働きやすい状態に整える。</p>
+      </div>
+      <div class="step">
+        <div class="no">02</div>
+        <h3>製麹<small>麹づくり</small></h3>
+        <p class="sum">蒸した米に麹菌を生やし、<b>糖を作る力</b>を宿す。約2日、造りで最重要の工程。</p>
+        <a class="try" href="koji.html">▶ 麹をつくってみる</a>
+      </div>
+      <div class="step">
+        <div class="no">03</div>
+        <h3>酒母<small>酵母を増やす“もと”</small></h3>
+        <p class="sum">小さなタンクで<b>酵母を元気に大量培養</b>。発酵を成功させる先発隊。</p>
+        <a class="try" href="moto.html">▶ 酛を建ててみる</a>
+      </div>
+      <div class="step">
+        <div class="no">04</div>
+        <h3>醪<small>本番の発酵・もろみ</small></h3>
+        <p class="sum">大タンクで<b>糖化と発酵が同時に進む本番</b>。約3〜5週間かけて泡立ち、お酒になる。</p>
+        <a class="try" href="play.html">▶ 醪を育ててみる</a>
+      </div>
+      <div class="step">
+        <div class="no">05</div>
+        <h3>搾り<small>仕上げて瓶へ</small></h3>
+        <p class="sum">発酵しきった醪を<b>しぼり、お酒と酒粕に分ける</b>。仕上げて瓶詰め、出荷。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CLOSING -->
+<section class="blk close">
+  <div class="max reveal">
+    <div class="recap">
+      <h3>ぜんぶ、3行で。</h3>
+      <ol>
+        <li>お米は甘くないから、<b>そのままではお酒にならない</b>。</li>
+        <li>だから<b>麹が糖を作り、酵母が酒に変える</b>（＝並行複発酵）。</li>
+        <li>これを<b>5工程・2か月以上</b>かけて、丁寧に。</li>
+      </ol>
+    </div>
+    <div class="huge">米よ、<span class="fill">醸せ</span>。</div>
+    <div class="brewcta">
+      <a href="brew.html" class="playbtn">🍶 自分で醸してみる →</a>
+      <div class="brewsub"><b style="color:var(--ink)">配合を選ぶ</b>ところから、<b style="color:var(--gold)">麹 → 酛 → 醪</b>。<br>杜氏になって、あなたの一本を仕込む。</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="f1">米 → 酒</div>
+  <div class="f2">お米が日本酒になる仕組み・これだけ入門<br>参考：SSI『日本酒の基』／『酒造講本』ほか醸造の基礎資料をもとに再構成</div>
+</footer>
+
+<script>
+  const prog=document.getElementById('progress');
+  addEventListener('scroll',()=>{const h=document.documentElement;prog.style.width=(h.scrollTop/(h.scrollHeight-h.clientHeight)*100)+'%'},{passive:true});
+  const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  const cv=document.getElementById('foam'),ctx=cv.getContext('2d');let W,H,parts;
+  function size(){W=cv.width=innerWidth*devicePixelRatio;H=cv.height=innerHeight*devicePixelRatio;cv.style.width=innerWidth+'px';cv.style.height=innerHeight+'px';init()}
+  function init(){parts=[];const c=Math.min(110,Math.floor(innerWidth/10));for(let i=0;i<c;i++)parts.push(mk())}
+  function mk(){return{x:Math.random()*W,y:H+Math.random()*H,r:(1+Math.random()*4)*devicePixelRatio,v:(.3+Math.random()*1.1)*devicePixelRatio,a:.1+Math.random()*.5,c:Math.random()<.22?'242,180,58':(Math.random()<.35?'255,46,23':'246,241,230')}}
+  function draw(){ctx.clearRect(0,0,W,H);for(const p of parts){p.y-=p.v;p.x+=Math.sin(p.y*.01)*.4*devicePixelRatio;if(p.y<-10){Object.assign(p,mk());p.y=H+10}ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fillStyle='rgba('+p.c+','+p.a+')';ctx.fill()}requestAnimationFrame(draw)}
+  addEventListener('resize',size);size();draw();
+</script>
+</body>
+</html>
