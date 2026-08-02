@@ -35,7 +35,9 @@
   .topbar{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.7rem}
   .topbar .hr{font-weight:900;font-size:1.05rem}
   .topbar .hr b{color:var(--gold);font-family:Arial}
-  .topbar .phase{font-size:.82rem;color:var(--ink-dim)}
+  .topbar .phase{font-size:.82rem;color:var(--gold);font-weight:700}
+  .phasedesc{margin-top:.6rem;background:rgba(242,180,58,.06);border:1px solid rgba(242,180,58,.22);border-radius:10px;padding:.6rem .8rem;font-size:.8rem;line-height:1.6;color:var(--ink-dim)}
+  .phasedesc b{color:var(--ink)}
   .chart-wrap{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:.7rem}
   svg.chart{width:100%;height:auto;display:block}
   .legend{display:flex;gap:1rem;font-size:.72rem;margin-top:.4rem;color:var(--ink-dim)}
@@ -83,7 +85,7 @@
   <div class="kick">一麹 二酛 三造り ／ MAKING KOJI</div>
   <div style="display:flex;gap:.55rem;justify-content:center;font-size:.72rem;font-weight:800;letter-spacing:.08em;color:var(--ink-dim);margin-bottom:1.4rem"><span class="blood">① 麹</span><span>→</span><span>② 酛</span><span>→</span><span>③ 醪</span></div>
   <h1>麹を、<span class="blood">つくる</span>。</h1>
-  <p>蒸した米に麹菌をふりかけた。ここから約2日、麹室（こうじむろ）の中で菌が育つ。菌は<b style="color:var(--ink)">自ら熱を出す</b>——放っておくと焼ける。<b style="color:var(--gold)">手入れ（ほぐして冷ます）</b>のタイミングが全て。</p>
+  <p><b style="color:var(--gold)">原料処理</b>——米を洗い（洗米）、水を吸わせ（浸漬）、蒸す。その蒸米に麹菌をふりかけた。ここから約2日、麹室（こうじむろ）の中で菌が育つ。菌は<b style="color:var(--ink)">自ら熱を出す</b>——放っておくと焼ける。<b style="color:var(--gold)">手入れ（ほぐして冷ます）</b>のタイミングが全て。</p>
   <div id="vintageCard"></div>
   <div class="goal">🎯 <b>ねらい</b>：菌を焼かず（品温を上げすぎず）に育て、糖化力の高い麹に。<b>どんな麹を目指す？</b></div>
   <div class="target-row">
@@ -108,6 +110,8 @@
       <span><i style="background:rgba(242,180,58,.3)"></i>良い温度帯</span>
     </div>
   </div>
+
+  <div class="phasedesc" id="phaseDesc"></div>
 
   <div class="rice-row">
     <div class="rice"><div class="mold" id="mold"></div></div>
@@ -234,9 +238,19 @@ function tenire(){ temp-=4.2; moisture-=1.8; if(moisture<5)moisture=5; tenireCou
 function phaseName(h){
   if(h<6)return'床もみ';if(h<16)return'切り返し';if(h<26)return'盛り';if(h<34)return'仲仕事';if(h<42)return'仕舞仕事';return'出麹どき';
 }
+// 各工程の解説（赤本 第V章準拠）
+function phaseDesc(h){
+  if(h<6)  return'<b>床もみ</b>：蒸米に種麹（麹菌の胞子）をまぶした直後。品温32〜33℃で山積みにし、菌が根を張り始める。';
+  if(h<16) return'<b>切り返し</b>：固まった米をほぐし、水分と温度を均一に。菌が米粒の表面に定着していく段階。';
+  if(h<26) return'<b>盛り</b>：麹蓋や箱に小分け。品温35〜36℃、菌糸が米に食い込み始め、破精（はぜ）が回り出す。';
+  if(h<34) return'<b>仲仕事</b>：盛った麹をほぐして広げ、38〜39℃へ。破精を米全体へ回す山場。ここで熱がこもりやすい。';
+  if(h<42) return'<b>仕舞仕事</b>：最後の手入れ。厚みを整え、糖化酵素の生成を促す。品温38〜39℃。';
+  return'<b>出麹どき</b>：積替えて40℃前後を保ち、酵素を十分に蓄えさせる。まもなく麹室から出す。';
+}
 function refresh(){
   $('#hr').textContent=Math.round(hr);
   $('#phase').textContent=phaseName(hr);
+  $('#phaseDesc').innerHTML=phaseDesc(hr);
   $('#roT').innerHTML=temp.toFixed(1)+'<small>℃</small>';
   $('#roM').textContent=Math.round(moisture)+' /しっとり';
   $('#roE').textContent=Math.round(enzyme);

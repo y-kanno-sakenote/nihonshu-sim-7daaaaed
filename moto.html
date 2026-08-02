@@ -35,7 +35,9 @@
   .topbar{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.7rem}
   .topbar .hr{font-weight:900;font-size:1.05rem}
   .topbar .hr b{color:var(--gold);font-family:Arial}
-  .topbar .phase{font-size:.82rem;color:var(--ink-dim)}
+  .topbar .phase{font-size:.82rem;color:var(--gold);font-weight:700}
+  .phasedesc{margin-top:.6rem;background:rgba(242,180,58,.06);border:1px solid rgba(242,180,58,.22);border-radius:10px;padding:.6rem .8rem;font-size:.8rem;line-height:1.6;color:var(--ink-dim)}
+  .phasedesc b{color:var(--ink)}
   .chart-wrap{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:.7rem}
   svg.chart{width:100%;height:auto;display:block}
   .legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.72rem;margin-top:.4rem;color:var(--ink-dim)}
@@ -110,6 +112,8 @@
       <button id="guideTog" class="guidetog" onclick="toggleGuide()">お手本：ON</button>
     </div>
   </div>
+
+  <div class="phasedesc" id="phaseDesc"></div>
 
   <div class="readout">
     <div class="ro"><div class="l">酵母の湧き</div><div class="v" id="roY">1</div></div>
@@ -242,11 +246,25 @@ function phaseName(){
   if(type==='kimoto'){ if(day<7)return'打瀬（酸を育てる）'; if(day<12)return'暖気入れ'; if(yeast<70)return'酵母育成'; return'湧付き'; }
   if(day<2)return'仕込み'; if(day<5)return'湧付き前'; if(yeast<70)return'酵母育成'; return'湧付き';
 }
+// 各工程の解説（赤本 第Ⅵ章準拠）
+function phaseDesc(){
+  if(type==='kimoto'){
+    if(day<7)  return'<b>打瀬（うたせ）</b>：低温（〜9℃）で寝かせる。硝酸還元菌→乳酸菌の順に働き、乳酸（酸）が育つ。この酸が後で酵母を雑菌から守る。焦って温めない。';
+    if(day<12) return'<b>暖気入れ（だき）</b>：暖気樽で少しずつ昇温。酸ができたのを見計らって、酵母が動ける温度へ。早すぎると野生酵母に負ける（早湧き）。';
+    if(yeast<70)return'<b>酵母育成</b>：15〜17℃で酵母が旺盛に増殖。炭酸ガスで物料が膨れてくる（膨れ）。';
+    return'<b>湧付き</b>：酵母が最高潮に湧いた。使用時ボーメ7〜8が目安。よく湧いた酛は醪で力強く発酵する。';
+  }
+  if(day<2)   return'<b>仕込み</b>：乳酸をあらかじめ添加。最初から酸で守られ、安全・手早い（速醸＝速く醸す）。';
+  if(day<5)   return'<b>湧付き前</b>：18〜20℃で酵母を育てる。生酛の微生物の遷移を省いた分、短期間で仕上がる。';
+  if(yeast<70)return'<b>酵母育成</b>：酵母が増殖し膨れてくる。品温は最高20℃前後まで。';
+  return'<b>湧付き</b>：酵母が湧きそろった。使用時ボーメ7〜8が目安。育成5日＋枯らし5日で計〜15日。';
+}
 function vigorOf(){ return Math.max(0,Math.min(100, yeast*(1-0.9*zatsu/100))); }
 
 function refresh(){
   $('#day').textContent=day;
   $('#phase').textContent=phaseName();
+  $('#phaseDesc').innerHTML=phaseDesc();
   $('#roY').textContent=Math.round(yeast);
   $('#roA').textContent=Math.round(acid);
   $('#roT').innerHTML=temp+'<small>℃</small>';

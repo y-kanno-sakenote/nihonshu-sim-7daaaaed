@@ -34,7 +34,9 @@
   .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:.8rem}
   .topbar .day{font-weight:900;font-size:1.1rem}
   .topbar .day b{color:var(--gold);font-family:Arial}
-  .topbar .stage{font-size:.82rem;color:var(--ink-dim)}
+  .topbar .stage{font-size:.82rem;color:var(--gold);font-weight:700}
+  .phasedesc{margin-top:.6rem;background:rgba(242,180,58,.06);border:1px solid rgba(242,180,58,.22);border-radius:10px;padding:.6rem .8rem;font-size:.8rem;line-height:1.6;color:var(--ink-dim)}
+  .phasedesc b{color:var(--ink)}
   .chart-wrap{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:.7rem}
   svg.chart{width:100%;height:auto;display:block}
   .legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.72rem;margin-top:.4rem;color:var(--ink-dim)}
@@ -103,6 +105,12 @@
   <div class="goal">
     🎯 <b>ねらい</b>：発酵をうまく導いて、雑味を出さずアルコールを育て、<b>いいタイミングで搾る</b>。<br>
     <span style="color:var(--ink-dim);font-size:.82rem">・温度が高い→発酵が進むが暴れやすい<br>・低い→きれいだが止まりやすい<br>・末期は下げて酵母を守る</span>
+    <div style="margin-top:.8rem;font-size:.78rem;color:var(--ink-dim);border-top:1px dashed var(--line);padding-top:.7rem;line-height:1.7">
+      💡 <b style="color:var(--ink)">留添0日目について</b>：
+      グラフは三段仕込みの<b style="color:var(--ink)">留添</b>を終えた時点から始まります。実際の醪には留添の時点ですでに糖がありますが、
+      このシミュレーターでは<b style="color:var(--ink)">「糖化が発酵に先行してボーメが立ち上がる」</b>プロセスを体験してもらうため、
+      発酵系の起点（糖ゼロ）から表示しています。留後<b style="color:var(--ink)">3〜4日で最高ボーメ</b>を迎えれば正常です。
+    </div>
   </div>
   <div id="kojiCard"></div>
   <div><button class="btn" onclick="startGame()">仕込み open！</button></div>
@@ -125,6 +133,8 @@
     </div>
   </div>
 
+  <div class="phasedesc" id="phaseDesc"></div>
+
   <div class="readout">
     <div class="ro"><div class="l">ボーメ度（醪の比重）</div><div class="v" id="roB">0.0</div></div>
     <div class="ro"><div class="l">アルコール</div><div class="v" id="roE">0.0<small>%</small></div></div>
@@ -144,10 +154,12 @@
     <div class="hint" id="tempHint">明日の目標品温を決める（外気で実際の品温はブレる）</div>
   </div>
 
-  <div class="actions">
-    <button class="btn ghost" onclick="advance(1)">1日 進める →</button>
-    <button class="btn" id="pressBtn" onclick="doPress()" disabled>搾る（上槽）</button>
+  <div class="actions" style="flex-wrap:wrap">
+    <button class="btn ghost" onclick="advance(1)" style="flex:1;min-width:120px">1日 進める →</button>
+    <button class="btn ghost" id="skip5Btn" onclick="advance(5)" style="flex:1;min-width:120px">5日 まとめる →</button>
+    <button class="btn" id="pressBtn" onclick="doPress()" disabled style="flex:2;min-width:180px">搾る（上槽）</button>
   </div>
+  <div style="font-size:.72rem;color:var(--ink-dim);margin-top:.5rem;text-align:center">※ 高泡期（留後4〜10日）は発酵熱で品温が跳ねやすい。1日ずつ見るのが安全。</div>
 </div></section>
 
 <!-- RESULT -->
@@ -298,22 +310,37 @@ function renderForecast(){
 // ===== ゲーム状態 =====
 let t=0, G=0, E=0, Sr=P.Sr0;     // 連続状態
 let targetT=9.5;                  // プレイヤーの目標品温
-let actualT=9.5;                  // 外気補正後の実品温
+let actualT=9.5;                  // 外気・発酵熱を反映した実品温
+let lastHeat=0;                   // 直近の発酵熱オフセット(℃)
 let rec=[{day:0,T:9.5,G:0,E:0,baume:0,co2:0}];
 let maxCo2=0.0001, maxB=0, peakDay=0, dangerDays=0, hotDays=0, atodoke=false;
 let showGuide=true;
-// 理想の品温経過（標準型のお手本）: 9.5℃→+1/日→5日14.5→16.5で頭打ち→末期降温
-const idealT=(d)=>{ if(d<5)return 9.5+d*1.0; if(d<9)return 14.5+(d-5)*0.5; if(d<18)return 16.5; return Math.max(12,16.5-(d-18)*0.6); };
+// 理想の品温経過（標準型のお手本）: 9.5℃→+1/日→5日14.5→16.0で頭打ち→16日目以降 末期降温
+// お手本＝プレイヤーが設定する「目標品温」。発酵熱(+最大1.2℃)が上乗せされるため、赤本の"実品温 最高16〜17℃"に
+// 収まるよう目標側を1段下げ、末期降温も早める（実品温ピーク約17.1℃で着地）。仕様書§4の品温経過は実品温の規定。
+const idealT=(d)=>{ if(d<5)return 9.5+d*1.0; if(d<9)return 14.5+(d-5)*0.5; if(d<16)return 16.0; return Math.max(11,16.0-(d-16)*0.7); };
 function toggleGuide(){ showGuide=!showGuide; document.getElementById('guideTog').textContent='お手本ライン：'+(showGuide?'ON':'OFF'); draw(); }
 
 function startGame(){document.getElementById('intro').style.display='none';document.getElementById('game').style.display='block';draw();refresh();}
 
 function adjT(d){ targetT=Math.max(5,Math.min(24,+(targetT+d).toFixed(1))); document.getElementById('temp').textContent=targetT.toFixed(1); }
 
-// 1日分を凍結エンジンで積分（実品温T＝目標＋その日の外気）
+// 発酵熱：高泡期に品温が自然上昇する（赤本：高泡は留後5〜7日）。
+//   5日目以降に限定するのが肝——最高ボーメは3日目（糖化先行期）で、糖化の温度感度(qS=5.0)は発酵(qF=2.05)より
+//   遥かに高いため、その時期に熱を乗せると最高ボーメが膨らみ暴走判定に触れる。ゲートでランドマークを保つ。
+const HEAT_K=1.2, HEAT_FROM=5;
+function fermHeat(){
+  if(Math.round(t)<HEAT_FROM) return 0;
+  const prevRf=rec.length>1?rec[rec.length-1].co2:0;
+  if(!(prevRf>0)) return 0;
+  return HEAT_K*Math.min(1, prevRf/Math.max(maxCo2,1e-3));
+}
+// 1日分を凍結エンジンで積分（実品温T＝目標＋その日の外気＋発酵熱）
 function stepDay(){
   const dayIdx=Math.round(t)+1;
-  actualT=Math.max(5,Math.min(24, +(targetT+(weather[dayIdx]||0)).toFixed(2)));
+  const heat=fermHeat();
+  actualT=Math.max(5,Math.min(24, +(targetT+(weather[dayIdx]||0)+heat).toFixed(2)));
+  lastHeat=heat;
   const dt=0.02, steps=50, T=actualT;
   for(let i=0;i<steps;i++){
     t+=dt;
@@ -334,8 +361,10 @@ function stepDay(){
   maxCo2=Math.max(maxCo2,rfNow);
   if(baume>maxB){maxB=baume;peakDay=day;}
   if(T2>=20)hotDays++;
-  // あとどけ判定：ピーク後に日本酒度が逆に上昇（ボーメ微増）
-  if(day>peakDay+2 && rec.length>2 && baume>rec[rec.length-2].baume+0.05 && day>12) atodoke=true;
+  // あとどけ判定：発酵が止まったのに糖が残り（G>3）、ボーメが逆に上昇。※軽快な完成間際の微増では誤発火させない
+  if(day>peakDay+2 && rec.length>2 && baume>rec[rec.length-2].baume+0.08 && day>12 && G>3 && rfNow<maxCo2*0.35) atodoke=true;
+  // 警告日数の加算は日次で行う（advance(5)でも1日ずつ判定される）。表示はrefresh側。
+  if(warnState(day,rec[rec.length-1]).danger) dangerDays++;
 }
 
 function advance(n){
@@ -351,16 +380,21 @@ function refresh(){
   const ci=r.co2/maxCo2;
   document.getElementById('roC').textContent = ci>0.9?'🔥最盛':ci>0.55?'盛ん':ci>0.25?'中':ci>0.08?'弱':'静か';
   const [nm]=stage(day,r); document.getElementById('stage').textContent=nm;
+  document.getElementById('phaseDesc').innerHTML=stageDesc(day,r);
   // press button：10日目以降で有効
   document.getElementById('pressBtn').disabled = day<10;
   // 天気：予報と、直前に効いた外気
   renderForecast();
   const h=document.getElementById('tempHint');
-  if(weatherOn && h){
-    const nx=weather[day+1]||0;
-    const fc = day>=34?'' : (nx===0?' 明日の外気は穏やか。':` 明日は ${weatherIcon(nx)} 外気${nx>0?'+':''}${nx}℃ の予報→目標で補正を。`);
-    const last = (r.T!==undefined && Math.abs(r.T-targetT)>0.2)?`（実品温は外気で ${r.T.toFixed(1)}℃ になった）`:'';
-    h.innerHTML=`明日の目標品温を決める。${fc}${last}`;
+  if(h){
+    let fc='';
+    if(weatherOn && day<34){ const nx=weather[day+1]||0;
+      fc = nx===0?' 明日の外気は穏やか。':` 明日は ${weatherIcon(nx)} 外気${nx>0?'+':''}${nx}℃ の予報→目標で補正を。`; }
+    const heatMsg = lastHeat>=0.3
+      ? ` 🔥 発酵熱 +${lastHeat.toFixed(1)}℃（${lastHeat>=1.0?'最盛期——冷やして守る！':'活発'}）`
+      : '';
+    const last = (r.T!==undefined && Math.abs(r.T-targetT)>0.2)?`（実品温は ${r.T.toFixed(1)}℃ になった）`:'';
+    h.innerHTML=`明日の目標品温を決める。${fc}${heatMsg}${last}`;
   }
   // 警告
   checkWarn(day,r);
@@ -368,15 +402,22 @@ function refresh(){
   if(day>=34){ document.getElementById('pressBtn').disabled=false; }
 }
 
-function checkWarn(day,r){
-  const w=document.getElementById('warn'); let msg='',cls='';
+// 警告条件の判定のみ（副作用なし）。danger=true の日が dangerDays に積まれる
+function warnState(day,r){
   const last3=rec.slice(-4);
   const stall = day>peakDay+2 && last3.length>=4 && last3.every((x,i)=>i===0||(last3[i-1].baume-x.baume)<0.12) && r.G>3;
-  if(atodoke){ msg='⚠ あとどけ＝発酵が止まったサイン。早めに搾ろう。';cls='danger';}
-  else if(r.T>=20||maxB>11){ msg='🔥 発酵が暴れ気味。雑味・腐造のリスク。品温を下げよう。';cls='danger'; dangerDays++;}
-  else if(r.E>18&&r.T>16){ msg='⚠ 高アルコールなのに高温。酵母が弱る。品温を下げて守ろう。';cls='caution'; dangerDays++;}
-  else if(stall){ msg='⚠ 醪が動いていない。品温を上げて発酵を促そう。';cls='caution'; dangerDays++;}
-  else if(day>=22&&r.co2<maxCo2*0.12){ msg='✅ 発酵が落ち着いた。そろそろ搾りどき。';cls='caution';}
+  if(atodoke) return {msg:'⚠ あとどけ＝発酵が止まったサイン。早めに搾ろう。',cls:'danger',danger:false};
+  if(r.T>=20||maxB>11) return {msg:'🔥 発酵が暴れ気味。雑味・腐造のリスク。品温を下げよう。',cls:'danger',danger:true};
+  if(r.E>18&&r.T>16) return {msg:'⚠ 高アルコールなのに高温。酵母が弱る。品温を下げて守ろう。',cls:'caution',danger:true};
+  if(stall) return {msg:'⚠ 醪が動いていない。品温を上げて発酵を促そう。',cls:'caution',danger:true};
+  if(day>=22&&r.co2<maxCo2*0.12) return {msg:'✅ 発酵が落ち着いた。そろそろ搾りどき。',cls:'caution',danger:false};
+  return {msg:'',cls:'',danger:false};
+}
+
+// 表示専用（加算はstepDay側）
+function checkWarn(day,r){
+  const w=document.getElementById('warn');
+  const {msg,cls}=warnState(day,r);
   if(msg){w.textContent=msg;w.className='warn show '+cls;} else {w.className='warn';}
 }
 
@@ -390,6 +431,18 @@ function stage(day,r){
   if(r.E>=12&&c>maxCo2*0.35)return['落泡'];
   if(c>maxCo2*0.12)return['玉泡'];
   return['地（泡消え）'];
+}
+// 泡ステージの解説（赤本 第Ⅶ章「膠の状貌」準拠）
+function stageDesc(day,r){
+  const c=r.co2;
+  if(day<2)return'<b>仕込み直後</b>：三段仕込みの留添が終わり、糖化と発酵が同時に始まる（並行複発酵）。品温は低めから。';
+  if(day<=3)return'<b>筋泡（すじあわ）</b>：留後2〜3日。表面に筋状の泡。酵母が増え、糖化が先行してボーメが高まる時期。';
+  if(day<=4)return'<b>水泡・カニ泡</b>：留後3〜4日。石けん泡のような薄い膜。最高ボーメ（7〜8）を迎える頃。';
+  if(c>=maxCo2*0.9)return'<b>高泡（たかあわ）</b>：泡が最も高く盛り上がる発酵の最盛期。ボーメが切れ始め、アルコールが立ち上がる。';
+  if(r.E<13&&c>maxCo2*0.6)return'<b>岩泡（いわあわ）</b>：高泡が崩れて岩状に。アルコールが上がり、発酵は力強く続く。';
+  if(r.E>=12&&c>maxCo2*0.35)return'<b>落泡（おちあわ）</b>：泡が落ち着いてくる。アルコール12〜13%、辛味が増す頃。';
+  if(c>maxCo2*0.12)return'<b>玉泡（たまあわ）</b>：玉状の泡がまばらに残る。発酵は終盤、上槽（搾り）が近い。';
+  return'<b>地（じ・泡消え）</b>：泡が消えて液面が見える。発酵はほぼ停止。搾りどきの見極めを。';
 }
 
 // ===== チャート =====
@@ -436,8 +489,10 @@ function brandName(bucket, seed){
 function doPress(){
   const r=rec[rec.length-1], day=Math.round(t);
   const E=r.E, baume=r.baume;
-  // 完成酒の日本酒度は上槽時の残糖(G)から現実的な帯に算出（醪のボーメとは別物）
-  const nihon=Math.max(-30,Math.min(16,Math.round(8 - r.G*3.4)));
+  // 完成酒の日本酒度：仕様書§5.1の向き（日本酒度はボーメの符号反転）に従い、上槽時のボーメから算出。
+  //   醪の -10×ボーメ は"醪内の測定ルーラー"で、そのまま使うと末期(ボーメ-4前後)で+40相当になり非現実的。
+  //   実測(NRIB42仕込・正常38は -17〜+9/中央0)に合わせ係数1.8へ較正。ボーメ0で日本酒度0＝符号が必ず一致する。
+  const nihon=Math.max(-30,Math.min(20,Math.round(-1.8 * r.baume)));
   // 甘辛の“感じ方”は日本酒度＋酸度（高酸=辛口寄り）−アミノ酸度（コク＝丸み）
   const sando=motoInfo?motoInfo.sando:1.3, aminodo=motoInfo?motoInfo.aminodo:1.4;
   const tasteScore = nihon + 5*clampv(sando-1.3,-0.3,0.7) - 3*clampv(aminodo-1.4,-0.4,0.7);
@@ -455,17 +510,18 @@ function doPress(){
   const rich = motoInfo && (sando>=1.55 || aminodo>=1.55);
   let type = maxB>11?'濃醇（やや荒い）':(kaoriType?'華やか吟醸系':(rich?'生酛らしい複雑・コク':(maxB<6.5&&Math.max(...rec.map(x=>x.T))<13?'華やか吟醸系':'バランス型')));
   const kire = sando>=1.5?'キレのある':''; const koku = aminodo>=1.5?'コクのある':'';
-  // 評価
+  // 評価：固定のアル窓ではなく「暴走させず健全に発酵を導き、落ち着いてから搾ったか」で見る。
+  //   → 甘辛・アル度・ボーメは配合(米/麹/酛)が決める"性格"なので絶対値で縛らない。軽快な吟醸も濃醇な生酛も、
+  //     きれいに導いて搾りどきを外さなければ名杜氏。杜氏の腕＝発酵管理の健全さと搾りのタイミング。
   let stars=3, grade='', comment='';
-  const cleanFerment = maxB>=6 && maxB<=9 && hotDays<=2;
-  const goodAlc = E>=17.5 && E<=20;
-  const goodTiming = day>=22 && day<=30 && r.co2<maxCo2*0.2;
+  const runaway   = maxB>11 || hotDays>=3;           // 高温で暴れた（雑味・暴走）
+  const clean     = dangerDays===0 && !runaway;      // 破綻なく健全に発酵を導けた
+  const goodTiming= day>=18 && r.co2<maxCo2*0.2;     // 発酵が落ち着いてから搾った
   if(atodoke){ grade='しくじり杜氏…'; stars=2; comment='発酵が止まったまま置いてしまった。次はあとどけのサインを見逃さずに。'; }
-  else if(cleanFerment && goodAlc && goodTiming && dangerDays===0){ grade='名杜氏！'; stars=5; comment='狙いどおりのキレイな発酵。雑味なく、いい度数で、絶好のタイミングで搾れた。会心の一本。'; }
-  else if(maxB>11||hotDays>=3){ grade='攻めの杜氏'; stars=3; comment='高温で攻めた結果、力強いが雑味も乗った濃い酒に。好みは分かれる、個性派の一本。'; }
-  else if(E<15){ grade='慎重すぎ？'; stars=2; comment='低温・早搾りで発酵が伸び悩み、軽くやさしい酒に。もう少し攻めても良かったかも。'; }
-  else if(goodAlc && dangerDays<=1){ grade='good杜氏'; stars=4; comment='大きな破綻なく、バランスの取れた飲みやすい酒に仕上がった。'; }
-  else{ grade='そこそこ杜氏'; stars=3; comment='ひとまず酒にはなった。温度の山と搾りどきを意識すると、もう一段よくなる。'; }
+  else if(runaway){ grade='攻めの杜氏'; stars=3; comment='高温で攻めた結果、力強いが雑味も乗った濃い酒に。好みは分かれる、個性派の一本。'; }
+  else if(clean && goodTiming){ grade='名杜氏！'; stars=5; comment='破綻なく狙いどおりに発酵を導き、絶好のタイミングで搾れた会心の一本。'; }
+  else if(goodTiming){ grade='good杜氏'; stars=4; comment='大きな失敗なく、落ち着いて搾れた一本。末期の品温をもう少し抑えると完璧。'; }
+  else{ grade='そこそこ杜氏'; stars=3; comment='ひとまず酒にはなった。発酵を最後まで導き、落ち着いてから搾るともう一段よくなる。'; }
   if(kojiInfo||motoInfo){
     const parts=[];
     if(kojiInfo) parts.push(`糖化力${kojiInfo.toka}の${kojiInfo.haze==='sou'?'総破精':'突き破精'}麹`);
