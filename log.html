@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>仕込み記録簿｜実仕込みのもろみ経過</title>
+<style>
+  :root{
+    --bg:#0b0a0d;--bg2:#141118;--ink:#f6f1e6;--ink-dim:#a8a091;
+    --blood:#ff2e17;--gold:#f2b43a;--line:rgba(246,241,230,.14);
+    --baume:#f2b43a;--alc:#ff2e17;--temp:#5fa8ff;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Hiragino Sans",sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.6}
+  .wrap{max-width:760px;margin:0 auto;padding:1.4rem 1.2rem 4rem}
+  .blood{color:var(--blood)}.gold{color:var(--gold)}
+
+  header.top{padding:1.6rem 0 .4rem}
+  header.top .kick{letter-spacing:.35em;color:var(--gold);font-size:.68rem;font-weight:800}
+  header.top h1{font-weight:900;font-size:clamp(1.6rem,6vw,2.2rem);margin-top:.5rem}
+  header.top p{color:var(--ink-dim);font-size:.86rem;margin-top:.6rem;max-width:34rem}
+  a.back{display:inline-block;margin-top:1rem;font-size:.78rem;color:var(--ink-dim);text-decoration:none;border:1px solid var(--line);border-radius:100px;padding:.35rem .9rem}
+  a.back:hover{border-color:var(--gold);color:var(--gold)}
+
+  .btn{display:inline-block;font-weight:800;letter-spacing:.05em;color:#0b0a0d;background:var(--blood);border:none;border-radius:100px;padding:.85rem 1.6rem;cursor:pointer;font-size:.9rem}
+  .btn:hover{background:#ff4526}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+  .btn.ghost:hover{border-color:var(--gold);color:var(--gold)}
+  .btn.sm{padding:.5rem 1rem;font-size:.78rem}
+  .btn.danger{background:transparent;color:#ff8a76;border:1px solid rgba(255,46,23,.4)}
+  .btn.danger:hover{background:rgba(255,46,23,.1)}
+  .btn:disabled{opacity:.35;cursor:not-allowed}
+
+  /* ===== LIST ===== */
+  #listView .actionsTop{margin:1.4rem 0}
+  .batchList{display:flex;flex-direction:column;gap:.8rem;margin-top:1.2rem}
+  .bcard{background:var(--bg2);border:1px solid var(--line);border-radius:14px;padding:1rem 1.2rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:1rem}
+  .bcard:hover{border-color:var(--gold)}
+  .bcard .bn{font-weight:800;font-size:1.02rem}
+  .bcard .bm{font-size:.76rem;color:var(--ink-dim);margin-top:.3rem}
+  .bcard .bstat{text-align:right;font-size:.78rem;white-space:nowrap}
+  .bcard .bstat .tag{display:inline-block;border-radius:100px;padding:.2rem .7rem;font-size:.68rem;font-weight:800;margin-bottom:.3rem}
+  .tag.ing{background:rgba(95,168,255,.15);color:var(--temp)}
+  .tag.done{background:rgba(242,180,58,.15);color:var(--gold)}
+  .empty{color:var(--ink-dim);font-size:.86rem;border:1px dashed var(--line);border-radius:14px;padding:2rem;text-align:center;margin-top:1.2rem}
+  .ioRow{display:flex;gap:.7rem;margin-top:2rem;flex-wrap:wrap}
+
+  /* ===== DETAIL ===== */
+  .metaGrid{display:grid;grid-template-columns:1fr 1fr;gap:.7rem;margin-top:1rem}
+  .metaGrid .full{grid-column:1/-1}
+  label{display:block;font-size:.7rem;color:var(--ink-dim);font-weight:700;margin-bottom:.3rem;letter-spacing:.03em}
+  input[type=text],input[type=number],input[type=date],textarea,select{
+    width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--ink);
+    padding:.55rem .7rem;font-size:.88rem;font-family:inherit}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--gold)}
+  textarea{resize:vertical;min-height:3rem}
+
+  .chart-wrap{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:.8rem;margin-top:1.4rem}
+  svg.chart{width:100%;height:auto;display:block}
+  .legend{display:flex;gap:1rem;flex-wrap:wrap;font-size:.72rem;margin-top:.5rem;color:var(--ink-dim);align-items:center}
+  .legend i{width:14px;height:3px;border-radius:2px;display:inline-block;margin-right:.3rem;vertical-align:middle}
+  .legend i.dash{background:repeating-linear-gradient(90deg,var(--ink-dim) 0 4px,transparent 4px 7px)}
+  .guidetog{margin-left:auto;background:transparent;border:1px solid var(--line);color:var(--ink-dim);border-radius:100px;padding:.25rem .7rem;font-size:.7rem;font-weight:700;cursor:pointer}
+
+  .entryForm{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:1rem;margin-top:1.2rem}
+  .entryForm h3{font-size:.86rem;margin-bottom:.7rem}
+  .entryGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem}
+  .entryGrid .full{grid-column:1/-1}
+
+  table.entries{width:100%;border-collapse:collapse;margin-top:1rem;font-size:.82rem}
+  table.entries th,table.entries td{padding:.5rem .5rem;border-bottom:1px solid var(--line);text-align:center}
+  table.entries th{color:var(--ink-dim);font-weight:700;font-size:.7rem}
+  table.entries td.memo{text-align:left;color:var(--ink-dim);font-size:.76rem;max-width:10rem}
+  table.entries .delEntry{color:var(--ink-dim);cursor:pointer;font-size:.9rem}
+  table.entries .delEntry:hover{color:var(--blood)}
+
+  .pressBox{border:1px dashed rgba(242,180,58,.5);border-radius:12px;padding:1rem;margin-top:1.4rem;background:rgba(242,180,58,.05)}
+  .specGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:.6rem;margin-top:1rem}
+  .specGrid .s{background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:.7rem}
+  .specGrid .s .l{font-size:.64rem;color:var(--ink-dim)}
+  .specGrid .s .v{font-weight:900;font-size:1.05rem;margin-top:.1rem}
+
+  .note{font-size:.76rem;color:var(--ink-dim);margin-top:.6rem;line-height:1.7}
+  .row{display:flex;gap:.7rem;flex-wrap:wrap;margin-top:1.2rem}
+  #fileInput{display:none}
+  @media(max-width:480px){
+    .metaGrid{grid-template-columns:1fr}
+    .entryGrid{grid-template-columns:1fr 1fr}
+    table.entries{font-size:.72rem}
+    table.entries th,table.entries td{padding:.4rem .3rem}
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="kick">MOROMI LOGBOOK</div>
+    <h1>🧾 仕込み記録簿</h1>
+    <p>シミュレーターとは別の、<b style="color:var(--ink)">実際の仕込みを記録する</b>ための道具。留後日数ごとに品温・ボーメを入れると、標準カーブと比較しながらグラフになります。<b style="color:var(--gold)">この端末のブラウザ内に保存</b>されます（バックアップはJSONで書き出し可）。</p>
+    <a class="back" href="index.html">← トップへ戻る</a>
+  </header>
+
+  <!-- ===== LIST VIEW ===== -->
+  <section id="listView">
+    <div class="actionsTop"><button class="btn" onclick="newBatch()">＋ 新しい仕込みを記録する</button></div>
+    <div class="batchList" id="batchList"></div>
+    <div class="empty" id="emptyMsg" style="display:none">まだ記録がありません。「＋ 新しい仕込みを記録する」から始めてください。</div>
+    <div class="ioRow">
+      <button class="btn ghost sm" onclick="exportAll()">⬇ JSONでバックアップ</button>
+      <button class="btn ghost sm" onclick="document.getElementById('fileInput').click()">⬆ JSONを読み込む</button>
+      <input type="file" id="fileInput" accept="application/json" onchange="importFile(event)">
+    </div>
+  </section>
+
+  <!-- ===== DETAIL VIEW ===== -->
+  <section id="detailView" style="display:none">
+    <a class="back" href="#" onclick="showList();return false">← 仕込み一覧へ</a>
+
+    <div class="metaGrid" style="margin-top:1.2rem">
+      <div class="full"><label>仕込み名</label><input type="text" id="mName" placeholder="例：2026酒造年度 #1"></div>
+      <div><label>留添日（開始日）</label><input type="date" id="mDate"></div>
+      <div><label>酒母タイプ</label>
+        <select id="mMoto"><option value="">未指定</option><option value="sokujo">速醸</option><option value="kimoto">生酛・山廃</option></select>
+      </div>
+      <div><label>米・精米歩合</label><input type="text" id="mRice" placeholder="例：雄町・精米70%"></div>
+      <div><label>麹の破精型・酵母</label><input type="text" id="mKoji" placeholder="例：総破精／協会901号"></div>
+      <div class="full"><label>仕込配合・メモ</label><textarea id="mNote" placeholder="総米・掛米・麹米・汲水など、自由記述で"></textarea></div>
+    </div>
+
+    <div class="chart-wrap">
+      <svg class="chart" id="chart" viewBox="0 0 620 280"></svg>
+      <div class="legend">
+        <span><i style="background:var(--temp)"></i>品温℃（実測）</span>
+        <span><i class="dash"></i>標準カーブ</span>
+        <span><i style="background:var(--baume)"></i>ボーメ度（実測）</span>
+        <button class="guidetog" id="guideTog" onclick="toggleGuide()">標準カーブ：ON</button>
+      </div>
+    </div>
+    <div class="note">📐 標準カーブは仕様書 v2.0 の凍結エンジン（教科書標準運転）。配合が大きく異なる仕込みでは目安程度に見てください。</div>
+
+    <div class="entryForm" id="entryForm">
+      <h3>今日の記録を追加</h3>
+      <div class="entryGrid">
+        <div><label>留後日数</label><input type="number" id="eDay" step="1" min="0"></div>
+        <div><label>品温 ℃</label><input type="number" id="eT" step="0.1"></div>
+        <div><label>ボーメ度</label><input type="number" id="eB" step="0.1"></div>
+        <div><label>酸度</label><input type="number" id="eSando" step="0.1"></div>
+        <div><label>アミノ酸度</label><input type="number" id="eAmino" step="0.1"></div>
+        <div><label>日本酒度（任意・実測時）</label><input type="number" id="eNihon" step="0.1"></div>
+        <div class="full"><label>メモ（手入れ・気づいたこと）</label><input type="text" id="eMemo"></div>
+      </div>
+      <div class="row"><button class="btn sm" onclick="addEntry()">記録を追加</button></div>
+    </div>
+
+    <table class="entries" id="entriesTable" style="display:none">
+      <thead><tr><th>日</th><th>品温</th><th>ボーメ</th><th>BMD</th><th>酸度</th><th>アミノ</th><th>メモ</th><th></th></tr></thead>
+      <tbody id="entriesBody"></tbody>
+    </table>
+
+    <div class="pressBox" id="pressBox">
+      <div id="pressPrompt">
+        <h3 style="font-size:.9rem;margin-bottom:.6rem">🍶 搾り（上槽）を記録する</h3>
+        <div class="entryGrid">
+          <div><label>搾った日（留後日数）</label><input type="number" id="pDay" step="1" min="0"></div>
+          <div><label>アルコール分 %</label><input type="number" id="pAlc" step="0.1"></div>
+          <div><label>日本酒度</label><input type="number" id="pNihon" step="0.1"></div>
+          <div><label>酸度</label><input type="number" id="pSando" step="0.1"></div>
+          <div><label>アミノ酸度</label><input type="number" id="pAmino" step="0.1"></div>
+          <div class="full"><label>メモ</label><input type="text" id="pMemo"></div>
+        </div>
+        <div class="row"><button class="btn sm" onclick="doPress()">搾ったことを記録する</button></div>
+      </div>
+      <div id="pressedSpec" style="display:none">
+        <h3 style="font-size:.9rem;margin-bottom:.4rem">🍶 搾り済み</h3>
+        <div class="specGrid" id="specGrid"></div>
+        <div class="row"><button class="btn ghost sm" onclick="unpress()">記録を修正する（搾りを取り消す）</button></div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:2rem;border-top:1px dashed var(--line);padding-top:1.2rem">
+      <button class="btn danger sm" onclick="deleteBatch()">この仕込みを削除</button>
+    </div>
+  </section>
+</div>
+
+<script>
+// ===== 標準カーブ（仕様書v2.0 §2-3 凍結係数。表示比較専用・状態非依存）=====
+const REF = (function(){
+  const P={Sr0:80,kdiss:10.0,kferm:11.5,Km:2.2,Emax:23,ye:0.245,kbG:1.00,kbE:0.22,t0:2.5,tau:0.55,qS:5.0,qF:2.05};
+  const q=(b,T)=>Math.pow(b,(T-15)/8);
+  const std=d=>{ if(d<5)return 9.5+d*1.0; if(d<9)return 14.5+(d-5)*0.5; if(d<18)return 16.5; return Math.max(12,16.5-(d-18)*0.6); };
+  let t=0,G=0,E=0,Sr=P.Sr0; const rec=[{day:0,T:9.5,baume:0,E:0}];
+  for(let day=1; day<=30; day++){
+    const T=std(day), dt=0.02;
+    for(let i=0;i<50;i++){ t+=dt;
+      const Y=1/(1+Math.exp(-(t-P.t0)/P.tau));
+      const decay=Math.max(0,1-(Math.max(0,E-14)/9)*(Math.max(0,T-13)/8));
+      const rs=P.kdiss*(Sr/P.Sr0)*q(P.qS,T);
+      const rf=P.kferm*Y*Math.max(0.15,decay)*(G/(G+P.Km))*q(P.qF,T)*Math.max(0,1-E/P.Emax);
+      G+=(rs-rf)*dt; if(G<0)G=0;
+      E+=(P.ye*rf)*dt; if(E>P.Emax)E=P.Emax;
+      Sr-=rs*dt; if(Sr<0)Sr=0;
+    }
+    rec.push({day, T, baume:P.kbG*G-P.kbE*E, E});
+  }
+  return rec;
+})();
+
+// ===== localStorage 永続化 =====
+const LSKEY='nihonshu_log_v1';
+function loadAll(){ try{ const v=JSON.parse(localStorage.getItem(LSKEY)); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
+function saveAll(list){ localStorage.setItem(LSKEY, JSON.stringify(list)); }
+let batches = loadAll();
+let curId = null, showGuide = true;
+
+function uid(){ return 'b'+Date.now()+Math.random().toString(36).slice(2,7); }
+function $(s){ return document.querySelector(s); }
+function current(){ return batches.find(b=>b.id===curId); }
+
+// ===== LIST VIEW =====
+function renderList(){
+  const el=$('#batchList'); const empty=$('#emptyMsg');
+  const sorted=[...batches].sort((a,b)=>(b.startDate||'').localeCompare(a.startDate||''));
+  if(sorted.length===0){ el.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  el.innerHTML = sorted.map(b=>{
+    const last = b.entries.length ? b.entries[b.entries.length-1] : null;
+    const status = b.pressed ? `<span class="tag done">搾り済み</span>` : `<span class="tag ing">仕込み中</span>`;
+    const snap = b.pressed
+      ? `アル${b.pressed.alc ?? '—'}% ／ 日本酒度${fmtSign(b.pressed.nihon)}`
+      : (last ? `留後${last.day}日 ／ 品温${last.T ?? '—'}℃ ／ ボーメ${last.baume ?? '—'}` : '記録なし');
+    const meta = [b.rice, b.moto==='kimoto'?'生酛':(b.moto==='sokujo'?'速醸':''), b.koji].filter(Boolean).join(' ／ ');
+    return `<div class="bcard" onclick="openBatch('${b.id}')">
+      <div><div class="bn">${esc(b.name||'（無題の仕込み）')}</div><div class="bm">${esc(meta||'—')}　${b.startDate?esc(b.startDate)+'開始':''}</div></div>
+      <div class="bstat">${status}<br>${snap}</div>
+    </div>`;
+  }).join('');
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmtSign(n){ if(n===undefined||n===null||n==='') return '—'; return (n>0?'+':'')+n; }
+
+function newBatch(){
+  const b={ id:uid(), name:'', startDate:new Date().toISOString().slice(0,10), rice:'', moto:'', koji:'', note:'', entries:[], pressed:null };
+  batches.push(b); saveAll(batches); openBatch(b.id);
+}
+function showList(){ document.getElementById('detailView').style.display='none'; document.getElementById('listView').style.display='block'; curId=null; renderList(); }
+
+// ===== DETAIL VIEW =====
+function openBatch(id){
+  curId=id; const b=current(); if(!b) return showList();
+  document.getElementById('listView').style.display='none'; document.getElementById('detailView').style.display='block';
+  $('#mName').value=b.name||''; $('#mDate').value=b.startDate||''; $('#mMoto').value=b.moto||'';
+  $('#mRice').value=b.rice||''; $('#mKoji').value=b.koji||''; $('#mNote').value=b.note||'';
+  const nextDay = b.entries.length ? Math.max(...b.entries.map(e=>e.day))+2 : 0;
+  $('#eDay').value=nextDay; $('#eT').value=''; $('#eB').value=''; $('#eSando').value=''; $('#eAmino').value=''; $('#eNihon').value=''; $('#eMemo').value='';
+  renderPressBox(); renderEntries(); drawChart();
+}
+['mName','mDate','mMoto','mRice','mKoji','mNote'].forEach(id=>{
+  const el=document.getElementById(id); if(!el) return;
+  el.addEventListener('change', ()=>{
+    const b=current(); if(!b) return;
+    b.name=$('#mName').value; b.startDate=$('#mDate').value; b.moto=$('#mMoto').value;
+    b.rice=$('#mRice').value; b.koji=$('#mKoji').value; b.note=$('#mNote').value;
+    saveAll(batches); renderList();
+  });
+});
+
+function toggleGuide(){ showGuide=!showGuide; $('#guideTog').textContent='標準カーブ：'+(showGuide?'ON':'OFF'); drawChart(); }
+
+function addEntry(){
+  const b=current(); if(!b) return;
+  const day=parseFloat($('#eDay').value);
+  if(!isFinite(day)){ alert('留後日数を入力してください'); return; }
+  const num=v=>{ const x=parseFloat(v); return isFinite(x)?x:null; };
+  b.entries.push({ day, T:num($('#eT').value), baume:num($('#eB').value), sando:num($('#eSando').value),
+    amino:num($('#eAmino').value), nihon:num($('#eNihon').value), memo:$('#eMemo').value||'' });
+  b.entries.sort((a,c)=>a.day-c.day);
+  saveAll(batches);
+  $('#eDay').value=day+2; $('#eT').value=''; $('#eB').value=''; $('#eSando').value=''; $('#eAmino').value=''; $('#eNihon').value=''; $('#eMemo').value='';
+  renderEntries(); drawChart();
+}
+function delEntry(idx){
+  const b=current(); if(!b) return;
+  b.entries.splice(idx,1); saveAll(batches); renderEntries(); drawChart();
+}
+function renderEntries(){
+  const b=current(); const tbl=$('#entriesTable'), body=$('#entriesBody');
+  if(!b || b.entries.length===0){ tbl.style.display='none'; body.innerHTML=''; return; }
+  tbl.style.display='table';
+  body.innerHTML=b.entries.map((e,i)=>{
+    const bmd=(e.baume!=null)?(e.day*e.baume).toFixed(1):'—';
+    return `<tr><td>${e.day}</td><td>${e.T??'—'}</td><td>${e.baume??'—'}</td><td>${bmd}</td><td>${e.sando??'—'}</td><td>${e.amino??'—'}</td>
+      <td class="memo">${esc(e.memo||'')}</td><td><span class="delEntry" onclick="delEntry(${i})">✕</span></td></tr>`;
+  }).join('');
+}
+
+function renderPressBox(){
+  const b=current(); if(!b) return;
+  const prompt=$('#pressPrompt'), spec=$('#pressedSpec'), entryForm=$('#entryForm');
+  if(b.pressed){
+    prompt.style.display='none'; spec.style.display='block'; entryForm.style.display='none';
+    const p=b.pressed;
+    $('#specGrid').innerHTML=
+      `<div class="s"><div class="l">搾った日</div><div class="v">${p.day}日目</div></div>`+
+      `<div class="s"><div class="l">アルコール分</div><div class="v">${p.alc??'—'}%</div></div>`+
+      `<div class="s"><div class="l">日本酒度</div><div class="v">${fmtSign(p.nihon)}</div></div>`+
+      `<div class="s"><div class="l">酸度</div><div class="v">${p.sando??'—'}</div></div>`+
+      `<div class="s"><div class="l">アミノ酸度</div><div class="v">${p.amino??'—'}</div></div>`+
+      (p.memo?`<div class="s full" style="grid-column:1/-1"><div class="l">メモ</div><div class="v" style="font-size:.86rem">${esc(p.memo)}</div></div>`:'');
+  } else {
+    prompt.style.display='block'; spec.style.display='none'; entryForm.style.display='block';
+    const nextDay = b.entries.length ? Math.max(...b.entries.map(e=>e.day)) : 20;
+    $('#pDay').value=nextDay; $('#pAlc').value=''; $('#pNihon').value=''; $('#pSando').value=''; $('#pAmino').value=''; $('#pMemo').value='';
+  }
+}
+function doPress(){
+  const b=current(); if(!b) return;
+  const day=parseFloat($('#pDay').value);
+  if(!isFinite(day)){ alert('搾った日を入力してください'); return; }
+  const num=v=>{ const x=parseFloat(v); return isFinite(x)?x:null; };
+  b.pressed={ day, alc:num($('#pAlc').value), nihon:num($('#pNihon').value), sando:num($('#pSando').value), amino:num($('#pAmino').value), memo:$('#pMemo').value||'' };
+  saveAll(batches); renderPressBox(); drawChart();
+}
+function unpress(){ const b=current(); if(!b) return; b.pressed=null; saveAll(batches); renderPressBox(); drawChart(); }
+
+function deleteBatch(){
+  if(!confirm('この仕込みの記録を削除します。元に戻せません。よろしいですか？')) return;
+  batches=batches.filter(b=>b.id!==curId); saveAll(batches); showList();
+}
+
+// ===== チャート（品温・ボーメ：実測(実線) vs 標準(点線)）=====
+function drawChart(){
+  const b=current(); if(!b) return;
+  const svg=$('#chart'), W=620,H=280, pad={l:38,r:38,t:16,b:26}, XMAX=32;
+  const x=d=>pad.l+(d/XMAX)*(W-pad.l-pad.r);
+  const yT=v=>H-pad.b-((v-5)/(24-5))*(H-pad.t-pad.b);
+  const yB=v=>H-pad.b-((v-(-6))/(10-(-6)))*(H-pad.t-pad.b);
+  let s='';
+  for(let d=0;d<=30;d+=5){ s+=`<line x1="${x(d)}" y1="${pad.t}" x2="${x(d)}" y2="${H-pad.b}" stroke="rgba(255,255,255,.05)"/><text x="${x(d)}" y="${H-pad.b+16}" fill="#a8a091" font-size="9" text-anchor="middle">${d}</text>`; }
+  s+=`<line x1="${pad.l}" y1="${yB(0)}" x2="${W-pad.r}" y2="${yB(0)}" stroke="rgba(242,180,58,.22)" stroke-dasharray="4 3"/>`;
+  if(showGuide){
+    const pT=REF.map((r,i)=>(i?'L':'M')+x(r.day).toFixed(1)+' '+yT(r.T).toFixed(1)).join(' ');
+    const pB=REF.map((r,i)=>(i?'L':'M')+x(r.day).toFixed(1)+' '+yB(r.baume).toFixed(1)).join(' ');
+    s+=`<path d="${pT}" fill="none" stroke="var(--temp)" stroke-width="1.3" stroke-dasharray="3 4" opacity=".45"/>`;
+    s+=`<path d="${pB}" fill="none" stroke="var(--baume)" stroke-width="1.3" stroke-dasharray="3 4" opacity=".45"/>`;
+  }
+  const tPts=b.entries.filter(e=>e.T!=null), bPts=b.entries.filter(e=>e.baume!=null);
+  if(tPts.length){
+    const p=tPts.map((e,i)=>(i?'L':'M')+x(e.day).toFixed(1)+' '+yT(e.T).toFixed(1)).join(' ');
+    s+=`<path d="${p}" fill="none" stroke="var(--temp)" stroke-width="2.4"/>`;
+    tPts.forEach(e=>{ s+=`<circle cx="${x(e.day)}" cy="${yT(e.T)}" r="3" fill="var(--temp)"/>`; });
+  }
+  if(bPts.length){
+    const p=bPts.map((e,i)=>(i?'L':'M')+x(e.day).toFixed(1)+' '+yB(e.baume).toFixed(1)).join(' ');
+    s+=`<path d="${p}" fill="none" stroke="var(--baume)" stroke-width="2.4"/>`;
+    bPts.forEach(e=>{ s+=`<circle cx="${x(e.day)}" cy="${yB(e.baume)}" r="3" fill="var(--baume)"/>`; });
+  }
+  if(b.pressed && b.pressed.day!=null){
+    s+=`<line x1="${x(b.pressed.day)}" y1="${pad.t}" x2="${x(b.pressed.day)}" y2="${H-pad.b}" stroke="rgba(255,46,23,.5)" stroke-dasharray="2 3"/>`;
+    s+=`<text x="${x(b.pressed.day)}" y="${pad.t+9}" fill="rgba(255,138,118,.85)" font-size="8" text-anchor="middle">搾り</text>`;
+  }
+  svg.innerHTML=s;
+}
+
+// ===== エクスポート／インポート =====
+function exportAll(){
+  const blob=new Blob([JSON.stringify(batches,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const ts=new Date().toISOString().slice(0,10);
+  a.href=url; a.download=`仕込み記録_${ts}.json`; a.click();
+  URL.revokeObjectURL(url);
+}
+function importFile(ev){
+  const file=ev.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const imported=JSON.parse(reader.result);
+      if(!Array.isArray(imported)) throw new Error('形式が不正です');
+      const existingIds=new Set(batches.map(b=>b.id));
+      let added=0;
+      imported.forEach(b=>{ if(b && b.id && !existingIds.has(b.id)){ batches.push(b); added++; } });
+      saveAll(batches); renderList();
+      alert(`${added}件の仕込みを読み込みました（重複はスキップ）。`);
+    }catch(e){ alert('読み込みに失敗しました：'+e.message); }
+    ev.target.value='';
+  };
+  reader.readAsText(file);
+}
+
+renderList();
+</script>
+</body>
+</html>
