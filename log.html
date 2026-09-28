@@ -219,10 +219,13 @@ let badRows=[]; // 壊れた行は表示から外すが、消さずに保存し�
 function loadAll(){
   try{
     const v=JSON.parse(localStorage.getItem(LSKEY)); if(!Array.isArray(v)) return [];
-    badRows=v.filter(b=>!validBatch(b)); return v.filter(validBatch);
+    // 一覧に上げるのは正しい形で、まだ出ていない id のものだけ。残り（壊れた行・id重複）は保持だけする
+    const seen=new Set(), good=[]; badRows=[];
+    v.forEach(b=>{ if(validBatch(b)&&!seen.has(b.id)){ seen.add(b.id); good.push(b); } else badRows.push(b); });
+    return good;
   }catch(e){ return []; }
 }
-function saveAll(list){ localStorage.setItem(LSKEY, JSON.stringify(list.concat(badRows))); }
+function saveAll(list, bad=badRows){ localStorage.setItem(LSKEY, JSON.stringify(list.concat(bad))); }
 let batches = loadAll();
 let curId = null, showGuide = true;
 
@@ -417,16 +420,20 @@ function importFile(ev){
       if(!Array.isArray(imported)||!Array.isArray(keep)) throw new Error('形式が不正です');
       const bad=imported.filter(b=>!validBatch(b)).length;
       if(bad) throw new Error(`${bad}件の仕込みが読めない形です。いまの記録はそのままです`);
+      // 写しに足して保存を試し、成功してから画面側に反映する（容量超過なら画面側も元のまま）
+      const nextB=batches.slice(), nextBad=badRows.slice();
       const existingIds=new Set(batches.map(b=>b.id));
       let added=0;
-      imported.forEach(b=>{ if(b && b.id && !existingIds.has(b.id)){ batches.push(b); added++; } });
+      imported.forEach(b=>{ if(b && b.id && !existingIds.has(b.id)){ existingIds.add(b.id); nextB.push(b); added++; } });
       // 読めない行は一覧に出さず、そのまま保持する（同じものは重ねない）
       const seen=new Set(badRows.map(r=>JSON.stringify(r)));
       let kept=0;
-      keep.forEach(r=>{ const k=JSON.stringify(r); if(!seen.has(k)){ seen.add(k); badRows.push(r); kept++; } });
-      saveAll(batches); renderList();
+      keep.forEach(r=>{ const k=JSON.stringify(r); if(!seen.has(k)){ seen.add(k); nextBad.push(r); kept++; } });
+      try{ saveAll(nextB, nextBad); }
+      catch(e){ const q=new Error('保存できる容量を超えたため、読み込めませんでした。いまの記録はそのままです'); q.plain=true; throw q; }
+      batches=nextB; badRows=nextBad; renderList();
       alert(`${added}件の仕込みを読み込みました（重複はスキップ）。`+(kept?`読めない形の${kept}件は、消さずに保存してあります。`:''));
-    }catch(e){ alert('読み込みに失敗しました：'+e.message); }
+    }catch(e){ alert(e.plain ? e.message : '読み込みに失敗しました：'+e.message); }
     ev.target.value='';
   };
   reader.readAsText(file);
