@@ -112,7 +112,7 @@
       <button class="btn ghost sm" onclick="document.getElementById('fileInput').click()">⬆ JSONを読み込む</button>
       <input type="file" id="fileInput" accept="application/json" onchange="importFile(event)">
     </div>
-    <div class="note">iPhoneのSafariは、しばらく開かないと保存した記録を消すことがあります。ときどき「JSONでバックアップ」を。</div>
+    <div class="note">iPhoneのSafariは、しばらく開かないと記録を消すことがあります。ときどき「JSONでバックアップ」を。</div>
   </section>
 
   <!-- ===== DETAIL VIEW ===== -->
@@ -177,7 +177,7 @@
         <div class="specGrid" id="specGrid"></div>
         <div class="row" id="unpressAsk"><button class="btn ghost sm" onclick="askUnpress(true)">記録を修正する（搾りを取り消す）</button></div>
         <div id="unpressConfirm" style="display:none">
-          <div class="note" style="color:var(--ink)">搾りの記録を取り消して、入力欄に戻します。よろしいですか？</div>
+          <div class="note" style="color:var(--ink)">搾りの記録を取り消して、入力欄に戻しますか？</div>
           <div class="row" style="margin-top:.6rem"><button class="btn sm" onclick="unpress()">取り消して修正する</button><button class="btn ghost sm" onclick="askUnpress(false)">やめる</button></div>
         </div>
       </div>
@@ -407,7 +407,7 @@ function importFile(ev){
       const imported=JSON.parse(reader.result);
       if(!Array.isArray(imported)) throw new Error('形式が不正です');
       const bad=imported.filter(b=>!validBatch(b)).length;
-      if(bad) throw new Error(`${bad}件の仕込みの形が不正です。何も保存していません`);
+      if(bad) throw new Error(`${bad}件の仕込みが読めない形です。いまの記録はそのままです`);
       const existingIds=new Set(batches.map(b=>b.id));
       let added=0;
       imported.forEach(b=>{ if(b && b.id && !existingIds.has(b.id)){ batches.push(b); added++; } });
