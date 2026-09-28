@@ -98,7 +98,7 @@
   <header class="top">
     <div class="kick">MOROMI LOGBOOK</div>
     <h1>🧾 仕込み記録簿</h1>
-    <p>シミュレーターとは別の、<b style="color:var(--ink)">実際の仕込みを記録する</b>ための道具。留後日数ごとに品温・ボーメを入れると、標準カーブと比較しながらグラフになります。<b style="color:var(--gold)">この端末のブラウザ内に保存</b>されます（バックアップはJSONで書き出し可）。</p>
+    <p>シミュレーターとは別の、<b style="color:var(--ink)">実際の仕込みを記録する</b>ための道具。留後日数ごとに品温・ボーメを入れると、酒類総合研究所の実施仕込の実測と見比べながらグラフになります。<b style="color:var(--gold)">この端末のブラウザ内に保存</b>されます（バックアップはJSONで書き出し可）。</p>
     <a class="back" href="index.html">← トップへ戻る</a>
   </header>
 
@@ -132,13 +132,13 @@
     <div class="chart-wrap">
       <svg class="chart" id="chart" viewBox="0 0 620 280"></svg>
       <div class="legend">
-        <span><i style="background:var(--temp)"></i>品温℃（実測）</span>
-        <span><i class="dash"></i>標準カーブ</span>
-        <span><i style="background:var(--baume)"></i>ボーメ度（実測）</span>
-        <button class="guidetog" id="guideTog" onclick="toggleGuide()">標準カーブ：ON</button>
+        <span><i style="background:var(--temp)"></i>品温℃（この記録）</span>
+        <span><i style="background:var(--baume)"></i>ボーメ度（この記録）</span>
+        <span><i style="height:9px;background:rgba(168,160,145,.3)"></i>酒類総研 実施仕込<span id="refN"></span>件の実測</span>
+        <button class="guidetog" id="guideTog" onclick="toggleGuide()">実測の目安：ON</button>
       </div>
     </div>
-    <div class="note">📐 標準カーブは仕様書 v2.0 の凍結エンジン（教科書標準運転）。配合が大きく異なる仕込みでは目安程度に見てください。</div>
+    <div class="note">📐 帯と点は<b>酒類総合研究所の実施仕込<span id="refN2"></span>件の実測</b>（NRIB 実もろみDB、2026-09-05取得。酒類醸造講習の総米20kg・60%山田錦・速醸・純米。異常4件を除く）。線＝中央値、濃い帯＝四分位（25〜75%）、薄い帯＝最小〜最大。日ごとの数値は公開されていないため線で結ばず、3つの節目だけを出します：①最高ボーメ（留後3〜4日目に置く＝清酒製造技術 p.265）②最高品温（醪日数の1/3〜2/3に置く＝同 p.263）③上槽時のボーメ（点＝各仕込。製成酒の日本酒度÷(−10)）。</div>
 
     <div class="entryForm" id="entryForm">
       <h3>今日の記録を追加</h3>
@@ -186,27 +186,12 @@
 </div>
 
 <script>
-// ===== 標準カーブ（仕様書v2.0 §2-3 凍結係数。表示比較専用・状態非依存）=====
-const REF = (function(){
-  const P={Sr0:80,kdiss:10.0,kferm:11.5,Km:2.2,Emax:23,ye:0.245,kbG:1.00,kbE:0.22,t0:2.5,tau:0.55,qS:5.0,qF:2.05};
-  const q=(b,T)=>Math.pow(b,(T-15)/8);
-  const std=d=>{ if(d<5)return 9.5+d*1.0; if(d<9)return 14.5+(d-5)*0.5; if(d<18)return 16.5; return Math.max(12,16.5-(d-18)*0.6); };
-  let t=0,G=0,E=0,Sr=P.Sr0; const rec=[{day:0,T:9.5,baume:0,E:0}];
-  for(let day=1; day<=30; day++){
-    const T=std(day), dt=0.02;
-    for(let i=0;i<50;i++){ t+=dt;
-      const Y=1/(1+Math.exp(-(t-P.t0)/P.tau));
-      const decay=Math.max(0,1-(Math.max(0,E-14)/9)*(Math.max(0,T-13)/8));
-      const rs=P.kdiss*(Sr/P.Sr0)*q(P.qS,T);
-      const rf=P.kferm*Y*Math.max(0.15,decay)*(G/(G+P.Km))*q(P.qF,T)*Math.max(0,1-E/P.Emax);
-      G+=(rs-rf)*dt; if(G<0)G=0;
-      E+=(P.ye*rf)*dt; if(E>P.Emax)E=P.Emax;
-      Sr-=rs*dt; if(Sr<0)Sr=0;
-    }
-    rec.push({day, T, baume:P.kbG*G-P.kbE*E, E});
-  }
-  return rec;
-})();
+// ===== 実測の目安（酒類総合研究所 実施仕込の実測。モデル計算ではない）=====
+// 作り方は data/build_log_reference.py と data/README.md。要約値だけが数値で公開されているため、日ごとの線は作らず
+// 3つの節目（最高ボーメ・最高品温・上槽時のボーメ）を中央値＋四分位＋最小〜最大で出す。節目どうしは結ばない（補間・外挿しない）。
+// ==NRIB_REF_BEGIN== data/build_log_reference.py が生成（手で直さない）
+const NRIB_REF = {"source":"NRIB 実もろみDB（酒類総合研究所 酒類醸造講習 実施仕込、2026-09-05取得）","n":38,"excluded":[5,6,9,37],"days":{"min":15.0,"q1":19.0,"med":20.0,"q3":20.0,"max":21.0},"maxT":{"min":12.4,"q1":13.225,"med":14.0,"q3":14.9,"max":16.4},"maxB":{"min":5.92,"q1":6.905,"med":7.55,"q3":7.965,"max":9.6},"endB":{"min":-0.94,"q1":-0.14,"med":0.0,"q3":0.285,"max":1.74},"pts":[[1,19,-0.594],[2,19,-0.94],[3,19,-0.14],[4,19,-0.09],[7,20,-0.1],[8,20,-0.28],[10,20,0.04],[11,20,0.29],[12,20,0.69],[13,20,0.56],[14,20,0.14],[15,19,0.0],[16,18,0.27],[17,15,0.03],[18,15,-0.03],[19,19,-0.45],[20,19,-0.54],[21,18,-0.56],[22,18,-0.14],[23,20,-0.22],[24,20,-0.1],[25,20,-0.62],[26,20,0.1],[27,19,1.74],[28,19,1.29],[29,20,0.33],[30,21,0.75],[31,20,0.2],[32,21,0.35],[33,20,0.0],[34,19,-0.01],[35,20,0.8],[36,20,1.4],[38,20,-0.1],[39,20,-0.4],[40,20,0.0],[41,20,-0.1],[42,20,0.0]]};
+// ==NRIB_REF_END==
 
 // ===== localStorage 永続化 =====
 const LSKEY='nihonshu_log_v1';
@@ -267,7 +252,7 @@ function openBatch(id){
   });
 });
 
-function toggleGuide(){ showGuide=!showGuide; $('#guideTog').textContent='標準カーブ：'+(showGuide?'ON':'OFF'); drawChart(); }
+function toggleGuide(){ showGuide=!showGuide; $('#guideTog').textContent='実測の目安：'+(showGuide?'ON':'OFF'); drawChart(); }
 
 function addEntry(){
   const b=current(); if(!b) return;
@@ -330,7 +315,22 @@ function deleteBatch(){
   batches=batches.filter(b=>b.id!==curId); saveAll(batches); showList();
 }
 
-// ===== チャート（品温・ボーメ：実測(実線) vs 標準(点線)）=====
+// ===== チャート（品温・ボーメ：この記録(実線) vs 酒類総研の実測(帯・点)）=====
+// 実測の目安の層。節目ごとに 最小〜最大(薄) → 四分位(濃) → 中央値(線) を重ねる。節目の外には何も描かない。
+function refLayer(x,yT,yB){
+  const R=NRIB_REF; let s='';
+  const band=(x0,x1,st,y,col)=>{
+    const r=(lo,hi,op)=>`<rect x="${x(x0).toFixed(1)}" y="${y(hi).toFixed(1)}" width="${(x(x1)-x(x0)).toFixed(1)}" height="${(y(lo)-y(hi)).toFixed(1)}" fill="${col}" opacity="${op}"/>`;
+    return r(st.min,st.max,.10)+r(st.q1,st.q3,.22)
+      +`<line x1="${x(x0).toFixed(1)}" y1="${y(st.med).toFixed(1)}" x2="${x(x1).toFixed(1)}" y2="${y(st.med).toFixed(1)}" stroke="${col}" stroke-width="1.6" opacity=".75"/>`;
+  };
+  const D=R.days.med;
+  s+=band(D/3, 2*D/3, R.maxT, yT, 'var(--temp)');             // ②最高品温：醪日数の1/3〜2/3（赤本p.263）
+  s+=band(3, 4, R.maxB, yB, 'var(--baume)');                    // ①最高ボーメ：留後3〜4日目（赤本p.265）
+  s+=band(R.days.q1-.5, R.days.q3+.5, R.endB, yB, 'var(--baume)'); // ③上槽時のボーメ：醪日数の四分位の幅
+  R.pts.forEach(p=>{ s+=`<circle cx="${x(p[1]).toFixed(1)}" cy="${yB(p[2]).toFixed(1)}" r="2.2" fill="none" stroke="var(--baume)" stroke-width="1" opacity=".5"/>`; });
+  return s;
+}
 function drawChart(){
   const b=current(); if(!b) return;
   const svg=$('#chart'), W=620,H=280, pad={l:38,r:38,t:16,b:26}, XMAX=32;
@@ -340,12 +340,7 @@ function drawChart(){
   let s='';
   for(let d=0;d<=30;d+=5){ s+=`<line x1="${x(d)}" y1="${pad.t}" x2="${x(d)}" y2="${H-pad.b}" stroke="rgba(255,255,255,.05)"/><text x="${x(d)}" y="${H-pad.b+16}" fill="#a8a091" font-size="9" text-anchor="middle">${d}</text>`; }
   s+=`<line x1="${pad.l}" y1="${yB(0)}" x2="${W-pad.r}" y2="${yB(0)}" stroke="rgba(242,180,58,.22)" stroke-dasharray="4 3"/>`;
-  if(showGuide){
-    const pT=REF.map((r,i)=>(i?'L':'M')+x(r.day).toFixed(1)+' '+yT(r.T).toFixed(1)).join(' ');
-    const pB=REF.map((r,i)=>(i?'L':'M')+x(r.day).toFixed(1)+' '+yB(r.baume).toFixed(1)).join(' ');
-    s+=`<path d="${pT}" fill="none" stroke="var(--temp)" stroke-width="1.3" stroke-dasharray="3 4" opacity=".45"/>`;
-    s+=`<path d="${pB}" fill="none" stroke="var(--baume)" stroke-width="1.3" stroke-dasharray="3 4" opacity=".45"/>`;
-  }
+  if(showGuide) s+=refLayer(x,yT,yB);
   const tPts=b.entries.filter(e=>e.T!=null), bPts=b.entries.filter(e=>e.baume!=null);
   if(tPts.length){
     const p=tPts.map((e,i)=>(i?'L':'M')+x(e.day).toFixed(1)+' '+yT(e.T).toFixed(1)).join(' ');
@@ -391,6 +386,7 @@ function importFile(ev){
   reader.readAsText(file);
 }
 
+document.getElementById('refN').textContent=NRIB_REF.n; document.getElementById('refN2').textContent=NRIB_REF.n;
 renderList();
 </script>
 </body>
