@@ -1,7 +1,7 @@
 # GitHub Pages（Jekyll）で配信しないもの。ファイル自体はリポジトリに残す。
 exclude:
   - MOROMI_MODEL_SPEC.md
-  - data/README.md
+  - data/   # 資料・生成スクリプト。遊ぶページはどれも読み込まない（log.html の目安は本文に埋め込み済み）
   - sim.html
   - sim3.html
   - tank.html

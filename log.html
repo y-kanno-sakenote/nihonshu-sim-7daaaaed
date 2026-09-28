@@ -183,8 +183,12 @@
       </div>
     </div>
 
-    <div class="row" style="margin-top:2rem;border-top:1px dashed var(--line);padding-top:1.2rem">
-      <button class="btn danger sm" onclick="deleteBatch()">この仕込みを削除</button>
+    <div style="margin-top:2rem;border-top:1px dashed var(--line);padding-top:1.2rem">
+      <div class="row" id="deleteAsk" style="margin-top:0"><button class="btn danger sm" onclick="askDelete(true)">この仕込みを削除</button></div>
+      <div id="deleteConfirm" style="display:none">
+        <div class="note" style="color:var(--ink)">この仕込みの記録を削除しますか？元に戻せません。</div>
+        <div class="row" style="margin-top:.6rem"><button class="btn danger sm" onclick="deleteBatch()">削除する</button><button class="btn ghost sm" onclick="askDelete(false)">やめる</button></div>
+      </div>
     </div>
   </section>
 </div>
@@ -262,7 +266,7 @@ function openBatch(id){
   $('#mRice').value=b.rice||''; $('#mKoji').value=b.koji||''; $('#mNote').value=b.note||'';
   const nextDay = b.entries.length ? Math.max(...b.entries.map(e=>e.day))+2 : 0;
   $('#eDay').value=nextDay; $('#eT').value=''; $('#eB').value=''; $('#eSando').value=''; $('#eAmino').value=''; $('#eNihon').value=''; $('#eMemo').value='';
-  renderPressBox(); renderEntries(); drawChart();
+  askDelete(false); renderPressBox(); renderEntries(); drawChart();
 }
 ['mName','mDate','mMoto','mRice','mKoji','mNote'].forEach(id=>{
   const el=document.getElementById(id); if(!el) return;
@@ -341,8 +345,8 @@ function unpress(){
   $('#pSando').value=v(p.sando); $('#pAmino').value=v(p.amino); $('#pMemo').value=v(p.memo);
 }
 
+function askDelete(on){ $('#deleteAsk').style.display=on?'none':'flex'; $('#deleteConfirm').style.display=on?'block':'none'; }
 function deleteBatch(){
-  if(!confirm('この仕込みの記録を削除します。元に戻せません。よろしいですか？')) return;
   batches=batches.filter(b=>b.id!==curId); saveAll(batches); showList();
 }
 
@@ -391,8 +395,10 @@ function drawChart(){
 }
 
 // ===== エクスポート／インポート =====
+// 壊れた行があるときだけ {batches, badRows} で書き出す（読めない行も捨てずに持ち運ぶ）。無ければ従来どおり配列。
 function exportAll(){
-  const blob=new Blob([JSON.stringify(batches,null,2)],{type:'application/json'});
+  const data=badRows.length ? {batches, badRows} : batches;
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   const ts=new Date().toISOString().slice(0,10);
@@ -404,15 +410,22 @@ function importFile(ev){
   const reader=new FileReader();
   reader.onload=()=>{
     try{
-      const imported=JSON.parse(reader.result);
-      if(!Array.isArray(imported)) throw new Error('形式が不正です');
+      const raw=JSON.parse(reader.result);
+      // 配列（従来の形）か、書き出し時に壊れた行を分けた {batches, badRows} の形
+      const obj=raw&&typeof raw==='object'&&!Array.isArray(raw);
+      const imported=obj?raw.batches:raw, keep=obj?raw.badRows:[];
+      if(!Array.isArray(imported)||!Array.isArray(keep)) throw new Error('形式が不正です');
       const bad=imported.filter(b=>!validBatch(b)).length;
       if(bad) throw new Error(`${bad}件の仕込みが読めない形です。いまの記録はそのままです`);
       const existingIds=new Set(batches.map(b=>b.id));
       let added=0;
       imported.forEach(b=>{ if(b && b.id && !existingIds.has(b.id)){ batches.push(b); added++; } });
+      // 読めない行は一覧に出さず、そのまま保持する（同じものは重ねない）
+      const seen=new Set(badRows.map(r=>JSON.stringify(r)));
+      let kept=0;
+      keep.forEach(r=>{ const k=JSON.stringify(r); if(!seen.has(k)){ seen.add(k); badRows.push(r); kept++; } });
       saveAll(batches); renderList();
-      alert(`${added}件の仕込みを読み込みました（重複はスキップ）。`);
+      alert(`${added}件の仕込みを読み込みました（重複はスキップ）。`+(kept?`読めない形の${kept}件は、消さずに保存してあります。`:''));
     }catch(e){ alert('読み込みに失敗しました：'+e.message); }
     ev.target.value='';
   };
