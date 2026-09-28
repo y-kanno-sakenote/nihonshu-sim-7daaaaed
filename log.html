@@ -112,6 +112,7 @@
       <button class="btn ghost sm" onclick="document.getElementById('fileInput').click()">⬆ JSONを読み込む</button>
       <input type="file" id="fileInput" accept="application/json" onchange="importFile(event)">
     </div>
+    <div class="note">iPhoneのSafariは、しばらく開かないと保存した記録を消すことがあります。ときどき「JSONでバックアップ」を。</div>
   </section>
 
   <!-- ===== DETAIL VIEW ===== -->
@@ -174,7 +175,11 @@
       <div id="pressedSpec" style="display:none">
         <h3 style="font-size:.9rem;margin-bottom:.4rem">🍶 搾り済み</h3>
         <div class="specGrid" id="specGrid"></div>
-        <div class="row"><button class="btn ghost sm" onclick="unpress()">記録を修正する（搾りを取り消す）</button></div>
+        <div class="row" id="unpressAsk"><button class="btn ghost sm" onclick="askUnpress(true)">記録を修正する（搾りを取り消す）</button></div>
+        <div id="unpressConfirm" style="display:none">
+          <div class="note" style="color:var(--ink)">搾りの記録を取り消して、入力欄に戻します。よろしいですか？</div>
+          <div class="row" style="margin-top:.6rem"><button class="btn sm" onclick="unpress()">取り消して修正する</button><button class="btn ghost sm" onclick="askUnpress(false)">やめる</button></div>
+        </div>
       </div>
     </div>
 
@@ -194,8 +199,26 @@ const NRIB_REF = {"source":"NRIB 実もろみDB（酒類総合研究所 酒類�
 
 // ===== localStorage 永続化 =====
 const LSKEY='nihonshu_log_v1';
-function loadAll(){ try{ const v=JSON.parse(localStorage.getItem(LSKEY)); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
-function saveAll(list){ localStorage.setItem(LSKEY, JSON.stringify(list)); }
+// 1件の仕込みが画面で扱える形か（読み込み前の検査と、保存済みデータの読み出しの両方で使う）
+const isNum=v=>v===undefined||v===null||(typeof v==='number'&&isFinite(v));
+const isStr=v=>v===undefined||v===null||typeof v==='string';
+const NUMF=['T','baume','sando','amino','nihon','alc'];
+function validRec(r){ return r&&typeof r==='object'&&!Array.isArray(r)&&typeof r.day==='number'&&isFinite(r.day)&&NUMF.every(k=>isNum(r[k]))&&isStr(r.memo); }
+function validBatch(b){
+  return !!b&&typeof b==='object'&&!Array.isArray(b)
+    &&typeof b.id==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(b.id)
+    &&['name','startDate','rice','moto','koji','note'].every(k=>isStr(b[k]))
+    &&Array.isArray(b.entries)&&b.entries.every(validRec)
+    &&(b.pressed===undefined||b.pressed===null||validRec(b.pressed));
+}
+let badRows=[]; // 壊れた行は表示から外すが、消さずに保存し直す（黙って捨てない）
+function loadAll(){
+  try{
+    const v=JSON.parse(localStorage.getItem(LSKEY)); if(!Array.isArray(v)) return [];
+    badRows=v.filter(b=>!validBatch(b)); return v.filter(validBatch);
+  }catch(e){ return []; }
+}
+function saveAll(list){ localStorage.setItem(LSKEY, JSON.stringify(list.concat(badRows))); }
 let batches = loadAll();
 let curId = null, showGuide = true;
 
@@ -283,6 +306,7 @@ function renderEntries(){
 function renderPressBox(){
   const b=current(); if(!b) return;
   const prompt=$('#pressPrompt'), spec=$('#pressedSpec'), entryForm=$('#entryForm');
+  askUnpress(false);
   if(b.pressed){
     prompt.style.display='none'; spec.style.display='block'; entryForm.style.display='none';
     const p=b.pressed;
@@ -307,7 +331,15 @@ function doPress(){
   b.pressed={ day, alc:num($('#pAlc').value), nihon:num($('#pNihon').value), sando:num($('#pSando').value), amino:num($('#pAmino').value), memo:$('#pMemo').value||'' };
   saveAll(batches); renderPressBox(); drawChart();
 }
-function unpress(){ const b=current(); if(!b) return; b.pressed=null; saveAll(batches); renderPressBox(); drawChart(); }
+function askUnpress(on){ $('#unpressAsk').style.display=on?'none':'flex'; $('#unpressConfirm').style.display=on?'block':'none'; }
+function unpress(){
+  const b=current(); if(!b||!b.pressed) return;
+  const p=b.pressed; b.pressed=null; saveAll(batches); renderPressBox(); drawChart();
+  // 取り消す前の値を入力欄に戻す（直してから押し直せるように）
+  const v=x=>(x===undefined||x===null)?'':x;
+  $('#pDay').value=v(p.day); $('#pAlc').value=v(p.alc); $('#pNihon').value=v(p.nihon);
+  $('#pSando').value=v(p.sando); $('#pAmino').value=v(p.amino); $('#pMemo').value=v(p.memo);
+}
 
 function deleteBatch(){
   if(!confirm('この仕込みの記録を削除します。元に戻せません。よろしいですか？')) return;
@@ -374,6 +406,8 @@ function importFile(ev){
     try{
       const imported=JSON.parse(reader.result);
       if(!Array.isArray(imported)) throw new Error('形式が不正です');
+      const bad=imported.filter(b=>!validBatch(b)).length;
+      if(bad) throw new Error(`${bad}件の仕込みの形が不正です。何も保存していません`);
       const existingIds=new Set(batches.map(b=>b.id));
       let added=0;
       imported.forEach(b=>{ if(b && b.id && !existingIds.has(b.id)){ batches.push(b); added++; } });
